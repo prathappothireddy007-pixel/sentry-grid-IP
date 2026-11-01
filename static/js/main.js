@@ -52,23 +52,51 @@ function showToast(type, message, title = '') {
 }
 
 // ============================================================
-// Loading Spinner Overlay Controller
+// Loading Spinner Overlay Controller (with 10s Failsafe)
 // ============================================================
+let loadingFailsafeTimer = null;
+
 function showLoading(message = 'Processing request...') {
     const overlay = document.getElementById('loading-overlay');
     const msgElem = document.getElementById('loading-message');
     if (overlay) {
         if (msgElem) msgElem.textContent = message;
         overlay.classList.add('active');
+        clearTimeout(loadingFailsafeTimer);
+        loadingFailsafeTimer = setTimeout(() => {
+            if (overlay.classList.contains('active')) {
+                overlay.classList.remove('active');
+                console.warn('Loading overlay auto-dismissed after 10s timeout.');
+            }
+        }, 10000);
     }
 }
 
 function hideLoading() {
+    clearTimeout(loadingFailsafeTimer);
     const overlay = document.getElementById('loading-overlay');
     if (overlay) {
         overlay.classList.remove('active');
     }
 }
+
+// Global dismiss handlers for all modals & loading overlay
+$(document).ready(function() {
+    // Backdrop click dismisses modal overlay
+    $(document).on('click', '.modal-overlay', function(e) {
+        if (e.target === this) {
+            $(this).removeClass('active');
+        }
+    });
+
+    // Escape key closes open modals and loading spinners
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            $('.modal-overlay.active').removeClass('active');
+            hideLoading();
+        }
+    });
+});
 
 // ============================================================
 // HTML Escaping (XSS Prevention)

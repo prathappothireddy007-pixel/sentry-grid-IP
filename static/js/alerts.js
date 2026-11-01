@@ -77,7 +77,10 @@ function loadAlerts(showLoader = true) {
 }
 
 // Render Alert Cards
+let currentLoadedAlerts = [];
+
 function renderAlerts(alerts) {
+    currentLoadedAlerts = alerts || [];
     const container = document.getElementById('alerts-container');
     if (!container) return;
 
@@ -125,7 +128,7 @@ function renderAlerts(alerts) {
                     </div>
 
                     ${a.safety_instructions ? `
-                        <button class="btn btn-sm btn-outline text-warning mt-2 mt-md-0" onclick="viewSafetyInstructions(${JSON.stringify(a).replace(/"/g, '&quot;')})">
+                        <button class="btn btn-sm btn-outline text-warning mt-2 mt-md-0" onclick="viewSafetyInstructions(${a.id})">
                             <i class="fa-solid fa-shield-halved me-1"></i> Safety Advisory
                         </button>
                     ` : ''}
@@ -257,7 +260,13 @@ function evaluateWeatherThresholds() {
 }
 
 // Safety Advisory Modal
-function viewSafetyInstructions(alertObj) {
+function viewSafetyInstructions(alertIdOrObj) {
+    let alertObj = alertIdOrObj;
+    if (typeof alertIdOrObj === 'number' || typeof alertIdOrObj === 'string') {
+        alertObj = currentLoadedAlerts.find(a => String(a.id) === String(alertIdOrObj));
+    }
+    if (!alertObj) return;
+
     $('#view-alert-modal-title').html(`<i class="fa-solid fa-shield-virus text-warning me-2"></i>Safety Protocol: ${escapeHtml(alertObj.title)}`);
     $('#view-alert-severity-badge').text(alertObj.severity).removeClass().addClass(`badge badge-${alertObj.severity.toLowerCase()}`);
     $('#view-alert-location-text').text(`Affected Sector: ${alertObj.location}`);
