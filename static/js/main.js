@@ -193,6 +193,173 @@ function markNotificationRead(notifId, targetLink) {
 }
 
 // ============================================================
+// Interactive Emergency SOS Modal (with Place Selection & GPS)
+// ============================================================
+function openSOSModal() {
+    const modal = document.getElementById('modal-sos-dispatch');
+    if (!modal) return;
+
+    modal.classList.add('active');
+
+    // Default to user locality if available
+    const customInput = document.getElementById('sos-custom-place');
+    if (customInput && !customInput.value && APP_CONFIG && APP_CONFIG.currentUserLocality) {
+        customInput.value = `${APP_CONFIG.currentUserLocality} Sector`;
+    }
+
+    // Try auto-locking GPS in background
+    captureSOSModalGPS(false);
+}
+
+function closeSOSModal() {
+    const modal = document.getElementById('modal-sos-dispatch');
+    if (modal) modal.classList.remove('active');
+}
+
+function onSOSLocationModeChange() {
+    const mode = $('input[name="sos-loc-mode"]:checked').val();
+    const placeContainer = $('#sos-place-container');
+    const gpsContainer = $('#sos-gps-container');
+    const customInput = $('#sos-custom-place');
+
+    if (mode === 'gps') {
+        placeContainer.addClass('d-none');
+        gpsContainer.removeClass('d-none');
+        customInput.prop('required', false);
+        captureSOSModalGPS(true);
+    } else {
+        placeContainer.removeClass('d-none');
+        gpsContainer.addClass('d-none');
+        customInput.prop('required', true);
+    }
+}
+
+function onSOSPlaceDropdownChange() {
+    const select = document.getElementById('sos-select-place');
+    const customInput = document.getElementById('sos-custom-place');
+    const selectedOpt = select.options[select.selectedIndex];
+
+    if (select.value && select.value !== 'CUSTOM') {
+        customInput.value = selectedOpt.text.replace(' • ', ', ');
+        const lat = selectedOpt.getAttribute('data-lat');
+        const lon = selectedOpt.getAttribute('data-lon');
+        if (lat && lon) {
+            $('#sos-lat-input').val(lat);
+            $('#sos-lon-input').val(lon);
+        }
+    } else if (select.value === 'CUSTOM') {
+        customInput.value = '';
+        customInput.focus();
+    }
+}
+
+function captureSOSModalGPS(showFeedback = true) {
+    const feedback = $('#sos-gps-modal-feedback');
+    if (showFeedback) {
+        feedback.html('<span class="text-info"><i class="fa-solid fa-spinner fa-spin me-1"></i>Acquiring satellite GPS fix...</span>');
+    }
+
+    if (!navigator.geolocation) {
+        if (showFeedback) feedback.html('<span class="text-danger">Geolocation API unsupported in browser</span>');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lon = pos.coords.longitude.toFixed(6);
+            $('#sos-lat-input').val(lat);
+            $('#sos-lon-input').val(lon);
+            feedback.html(`<span class="text-success"><i class="fa-solid fa-check-circle me-1"></i>GPS locked: ${lat}, ${lon}</span>`);
+            if (showFeedback) {
+                showToast('success', `GPS coordinates (${lat}, ${lon}) locked for SOS.`);
+            }
+        },
+        function(err) {
+            feedback.html(`<span class="text-warning">GPS unavailable (${err.message}). Please select place above.</span>`);
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
+    );
+}
+
+function handleSOSSubmit(e) {
+    e.preventDefault();
+
+    const mode = $('input[name="sos-loc-mode"]:checked').val();
+    const emergencyType = $('#sos-emergency-type').val();
+    const note = $('#sos-situation-note').val().trim();
+    let placeLocation = '';
+    let lat = null;
+    let lon = null;
+
+    if (mode === 'place') {
+        placeLocation = $('#sos-custom-place').val().trim();
+        if (!placeLocation) {
+            showToast('error', 'Please enter or select the incident place location.');
+            return;
+        }
+        lat = $('#sos-lat-input').val() ? parseFloat($('#sos-lat-input').val()) : null;
+        lon = $('#sos-lon-input').val() ? parseFloat($('#sos-lon-input').val()) : null;
+    } else {
+        lat = $('#sos-lat-input').val() ? parseFloat($('#sos-lat-input').val()) : null;
+        lon = $('#sos-lon-input').val() ? parseFloat($('#sos-lon-input').val()) : null;
+        placeLocation = (lat && lon) ? `GPS Incident Fix: (${lat}, ${lon})` : (APP_CONFIG.currentUserLocality || 'GPS Target Location');
+    }
+
+    const btn = $('#btn-submit-sos-modal');
+    btn.prop('disabled', true);
+    btn.find('.btn-text').addClass('d-none');
+    btn.find('.spinner-sm').removeClass('d-none');
+
+    const payload = {
+        citizen_name: APP_CONFIG.currentUserName || 'Citizen SOS Beacon',
+        contact_number: 'Emergency SOS Broadcast',
+        emergency_type: emergencyType,
+        priority: 'Critical',
+        is_sos: true,
+        location: placeLocation,
+        latitude: lat,
+        longitude: lon,
+        description: `URGENT SOS BEACON: Incident at [${placeLocation}]. ${note || 'Immediate rescue extrication requested.'}`
+    };
+
+    $.ajax({
+        url: '/api/requests',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        dataType: 'json',
+        success: function(response) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            if (response.success) {
+                closeSOSModal();
+                showToast('success', `🚨 SOS DISPATCH TRANSMITTED for ${placeLocation}! Rescue units alerted.`, 'SOS ACTIVE');
+
+                // Trigger page refresh if on dashboard or emergencies page
+                if (typeof loadEmergencies === 'function') {
+                    loadEmergencies(false);
+                }
+                if (typeof loadDashboardRequests === 'function') {
+                    loadDashboardRequests(false);
+                    loadDashboardMetrics(false);
+                }
+            }
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            const err = (xhr.responseJSON && xhr.responseJSON.message) || 'SOS transmission failed.';
+            showToast('error', err);
+        }
+    });
+}
+
+// ============================================================
 // User Logout Handler
 // ============================================================
 function handleLogout() {

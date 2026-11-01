@@ -13,6 +13,13 @@ from datetime import datetime
 
 reports_bp = Blueprint('reports', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return ''
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 @reports_bp.route('/api/reports/summary', methods=['GET'])
 @login_required
@@ -121,7 +128,7 @@ def export_csv():
                 writer.writerow([r['id'], r['citizen_name'], r['contact_number'],
                                 r['emergency_type'], r['location'], r['status'],
                                 r['priority'], 'Yes' if r['is_sos'] else 'No',
-                                r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else ''])
+                                format_datetime(r['created_at'])])
         elif report_type == 'resources':
             writer.writerow(['ID', 'Name', 'Category', 'Quantity', 'Unit', 'Min Threshold', 'Location', 'Status'])
             cursor.execute("SELECT * FROM resources ORDER BY category, name")
@@ -135,7 +142,7 @@ def export_csv():
             for r in cursor.fetchall():
                 writer.writerow([r['id'], r['disaster_type'], r['severity'], r['title'],
                                 r['location'], 'Yes' if r['is_active'] else 'No',
-                                r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else ''])
+                                format_datetime(r['created_at'])])
 
         csv_content = output.getvalue()
         output.close()
@@ -169,7 +176,7 @@ def get_disaster_reports():
         reports = cursor.fetchall()
         for r in reports:
             if r.get('created_at'):
-                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                r['created_at'] = format_datetime(r['created_at'])
         return jsonify({'success': True, 'data': reports}), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

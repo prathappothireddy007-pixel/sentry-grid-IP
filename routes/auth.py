@@ -14,6 +14,13 @@ from config import get_db_connection, close_db_connection
 # Create Blueprint for authentication routes
 auth_bp = Blueprint('auth', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 # ============================================================
 # Role-Based Access Control Decorators
@@ -334,7 +341,7 @@ def get_notifications():
 
         for n in notifications:
             if n.get('created_at'):
-                n['created_at'] = n['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                n['created_at'] = format_datetime(n['created_at'])
 
         # Unread count
         cursor.execute(

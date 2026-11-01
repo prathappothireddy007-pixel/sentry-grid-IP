@@ -15,6 +15,14 @@ from routes.auth import login_required, role_required
 
 emergencies_bp = Blueprint('emergencies', __name__)
 
+def format_datetime(val):
+    """Safely format datetime object or string to standard timestamp string."""
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 # Enforces the status workflow
 VALID_TRANSITIONS = {
     'Reported': ['Verified'],
@@ -95,7 +103,7 @@ def get_requests():
         for r in results:
             for k in ['created_at', 'updated_at']:
                 if r.get(k):
-                    r[k] = r[k].strftime('%Y-%m-%d %H:%M:%S')
+                    r[k] = format_datetime(r[k])
             for k in ['latitude', 'longitude']:
                 if r.get(k):
                     r[k] = float(r[k])
@@ -163,14 +171,14 @@ def get_request_detail(request_id):
 
         # Serialize
         for k in ['created_at', 'updated_at']:
-            if req.get(k): req[k] = req[k].strftime('%Y-%m-%d %H:%M:%S')
+            if req.get(k): req[k] = format_datetime(req[k])
         for k in ['latitude', 'longitude']:
             if req.get(k): req[k] = float(req[k])
         for h in history:
-            if h.get('created_at'): h['created_at'] = h['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if h.get('created_at'): h['created_at'] = format_datetime(h['created_at'])
         for t in teams:
             for k in ['assigned_at', 'completed_at']:
-                if t.get(k): t[k] = t[k].strftime('%Y-%m-%d %H:%M:%S')
+                if t.get(k): t[k] = format_datetime(t[k])
 
         req['status_history'] = history
         req['assigned_teams'] = teams

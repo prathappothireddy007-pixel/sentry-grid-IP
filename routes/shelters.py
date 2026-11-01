@@ -13,6 +13,13 @@ from routes.auth import login_required, role_required
 
 shelters_bp = Blueprint('shelters', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 def haversine(lat1, lon1, lat2, lon2):
     """Calculate distance (km) between two GPS coordinates using Haversine formula."""
@@ -52,7 +59,7 @@ def get_shelters():
 
         for s in shelters:
             for k in ['created_at', 'updated_at']:
-                if s.get(k): s[k] = s[k].strftime('%Y-%m-%d %H:%M:%S')
+                if s.get(k): s[k] = format_datetime(s[k])
             for k in ['latitude', 'longitude']:
                 if s.get(k): s[k] = float(s[k])
             s['available_capacity'] = s['total_capacity'] - s['current_occupancy']
@@ -93,7 +100,7 @@ def get_shelter(shelter_id):
             return jsonify({'success': False, 'message': 'Shelter not found.'}), 404
 
         for k in ['created_at', 'updated_at']:
-            if shelter.get(k): shelter[k] = shelter[k].strftime('%Y-%m-%d %H:%M:%S')
+            if shelter.get(k): shelter[k] = format_datetime(shelter[k])
         for k in ['latitude', 'longitude']:
             if shelter.get(k): shelter[k] = float(shelter[k])
         shelter['available_capacity'] = shelter['total_capacity'] - shelter['current_occupancy']

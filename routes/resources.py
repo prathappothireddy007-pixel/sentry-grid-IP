@@ -11,6 +11,13 @@ from routes.auth import login_required, role_required
 
 resources_bp = Blueprint('resources', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 @resources_bp.route('/api/resources', methods=['GET'])
 @login_required
@@ -39,7 +46,7 @@ def get_resources():
 
         for r in resources:
             for k in ['created_at', 'updated_at', 'last_restocked']:
-                if r.get(k): r[k] = r[k].strftime('%Y-%m-%d %H:%M:%S')
+                if r.get(k): r[k] = format_datetime(r[k])
             r['is_low_stock'] = r['quantity'] <= r['min_threshold']
 
         return jsonify({'success': True, 'data': resources}), 200

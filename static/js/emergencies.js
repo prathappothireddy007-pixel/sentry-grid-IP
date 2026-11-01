@@ -215,60 +215,9 @@ function updateMapMarkers(items) {
     }
 }
 
-// Immediate One-Touch SOS Dispatch (Requirement 7.B)
+// Immediate One-Touch SOS Dispatch (Opens Interactive Place Selection Modal)
 function triggerImmediateSOS() {
-    if (!confirm('CONFIRM INSTANT SOS:\nThis will broadcast an emergency dispatch beacon with your current coordinates. Proceed?')) {
-        return;
-    }
-
-    const feedback = $('#sos-gps-feedback');
-    feedback.html('<span class="text-danger"><i class="fa-solid fa-spinner fa-spin me-1"></i>Capturing GPS satellite fix...</span>');
-
-    function sendSOS(lat, lon) {
-        $.ajax({
-            url: '/api/requests',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                citizen_name: APP_CONFIG.currentUserName || 'Citizen SOS Beacon',
-                contact_number: 'Emergency SOS Broadcast',
-                emergency_type: 'other',
-                priority: 'Critical',
-                is_sos: true,
-                latitude: lat,
-                longitude: lon,
-                location: `GPS: ${lat || 'Unknown'}, ${lon || 'Unknown'}`,
-                description: 'SOS DISTRESS BEACON: Citizen reported life-critical disaster emergency requiring rescue dispatch.'
-            }),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    feedback.html('<span class="text-success"><i class="fa-solid fa-check me-1"></i>SOS beacon active & dispatched!</span>');
-                    showToast('success', response.message, 'SOS TRANSMITTED');
-                    loadEmergencies();
-                }
-            },
-            error: function(xhr) {
-                feedback.html('<span class="text-danger">SOS transmission error</span>');
-                showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'SOS failed.');
-            }
-        });
-    }
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(pos) {
-                sendSOS(pos.coords.latitude, pos.coords.longitude);
-            },
-            function() {
-                // If location access denied, submit without GPS as required
-                sendSOS(null, null);
-            },
-            { enableHighAccuracy: true, timeout: 6000 }
-        );
-    } else {
-        sendSOS(null, null);
-    }
+    openSOSModal();
 }
 
 // Modal Handlers: Detailed Emergency Report

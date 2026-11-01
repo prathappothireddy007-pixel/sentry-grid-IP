@@ -142,6 +142,104 @@
         </div>
     </div>
 
+    <!-- ================= Modal: Emergency SOS Place Selection ================= -->
+    <div class="modal-overlay" id="modal-sos-dispatch">
+        <div class="modal" style="max-width: 580px; border: 2px solid #e94560; box-shadow: 0 0 35px rgba(233, 69, 96, 0.5);">
+            <div class="modal-header bg-danger text-white py-3">
+                <h3 class="m-0 fs-5"><i class="fa-solid fa-triangle-exclamation me-2"></i>EMERGENCY SOS DISPATCH</h3>
+                <button class="modal-close text-white" onclick="closeSOSModal()">&times;</button>
+            </div>
+            <form id="form-sos-dispatch" onsubmit="handleSOSSubmit(event)">
+                <div class="modal-body p-4">
+                    <p class="text-light small mb-3">
+                        Broadcasting an SOS alerts all available emergency response teams, first responders, and municipal disaster command.
+                    </p>
+
+                    <!-- Location Option Toggle -->
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold text-warning mb-2"><i class="fa-solid fa-map-pin me-1"></i> Incident Location Mode <span class="required">*</span></label>
+                        <div class="d-flex gap-3 mb-2">
+                            <label class="d-flex align-items-center gap-2 cursor-pointer text-light">
+                                <input type="radio" name="sos-loc-mode" id="sos-mode-place" value="place" checked onchange="onSOSLocationModeChange()">
+                                <span>Select Incident Place</span>
+                            </label>
+                            <label class="d-flex align-items-center gap-2 cursor-pointer text-light">
+                                <input type="radio" name="sos-loc-mode" id="sos-mode-gps" value="gps" onchange="onSOSLocationModeChange()">
+                                <span>Use Current Live GPS</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Place Selection Container -->
+                    <div id="sos-place-container">
+                        <div class="form-group mb-3">
+                            <label for="sos-select-place" class="small text-secondary">Choose Known Sector / Locality</label>
+                            <select id="sos-select-place" class="form-control" onchange="onSOSPlaceDropdownChange()">
+                                <option value="">-- Choose Common Place / Sector --</option>
+                                <option value="Chennai, Velachery Basin" data-lat="12.9815" data-lon="80.2180">Chennai &bull; Velachery Basin (High Waterlogging Risk)</option>
+                                <option value="Chennai, Marina Coast" data-lat="13.0500" data-lon="80.2824">Chennai &bull; Marina Beach / Coastal Promenade</option>
+                                <option value="Chennai, T. Nagar" data-lat="13.0418" data-lon="80.2341">Chennai &bull; T. Nagar Commercial Corridor</option>
+                                <option value="Chennai, Central Railway Hub" data-lat="13.0827" data-lon="80.2707">Chennai &bull; Central Railway Station / Broadway</option>
+                                <option value="Chennai, Guindy Industrial Zone" data-lat="13.0067" data-lon="80.2025">Chennai &bull; Guindy Industrial Zone</option>
+                                <option value="Chennai, Tambaram South" data-lat="12.9249" data-lon="80.1000">Chennai &bull; Tambaram Transit Center</option>
+                                <option value="Chennai, Anna Nagar West" data-lat="13.0878" data-lon="80.2078">Chennai &bull; Anna Nagar West</option>
+                                <option value="Chennai, Madhavaram" data-lat="13.1488" data-lon="80.2306">Chennai &bull; Madhavaram / North Sector</option>
+                                <option value="Chennai, Adyar River Bank" data-lat="13.0012" data-lon="80.2565">Chennai &bull; Adyar River Bank Sector</option>
+                                <option value="CUSTOM">-- Type Custom Place Name Below --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="sos-custom-place" class="small text-secondary">Specific Address / Landmark / Floor <span class="required">*</span></label>
+                            <input type="text" id="sos-custom-place" class="form-control" placeholder="e.g. 2nd Floor, Door 14, 100ft Road near Bridge" required>
+                        </div>
+                    </div>
+
+                    <!-- GPS Coordinates Container (shown when GPS mode selected) -->
+                    <div id="sos-gps-container" class="p-3 bg-secondary rounded mb-3 d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small font-weight-bold text-info"><i class="fa-solid fa-satellite me-1"></i> Satellite Coordinate Lock</span>
+                            <button type="button" class="btn btn-sm btn-outline text-info py-0 px-2" onclick="captureSOSModalGPS()">
+                                <i class="fa-solid fa-crosshairs me-1"></i> Refresh GPS
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <input type="number" step="any" id="sos-lat-input" class="form-control" placeholder="Latitude (e.g. 13.0827)">
+                            <input type="number" step="any" id="sos-lon-input" class="form-control" placeholder="Longitude (e.g. 80.2707)">
+                        </div>
+                        <small class="text-muted d-block mt-1" id="sos-gps-modal-feedback">Click refresh to lock your current browser GPS coordinates</small>
+                    </div>
+
+                    <!-- Emergency Category -->
+                    <div class="form-group mb-3">
+                        <label for="sos-emergency-type" class="small text-secondary">Emergency Hazard Category <span class="required">*</span></label>
+                        <select id="sos-emergency-type" class="form-control" required>
+                            <option value="flood_rescue">Flood / Submerged Water Rescue</option>
+                            <option value="trapped">Trapped Persons / Building Collapse</option>
+                            <option value="medical">Severe Medical Trauma</option>
+                            <option value="fire">Fire & Hazard Outbreak</option>
+                            <option value="other" selected>General Life-Critical Emergency</option>
+                        </select>
+                    </div>
+
+                    <!-- Emergency Note -->
+                    <div class="form-group mb-3">
+                        <label for="sos-situation-note" class="small text-secondary">Situation Note (Optional)</label>
+                        <textarea id="sos-situation-note" class="form-control" rows="2" placeholder="e.g. Elderly citizen with chest pain, ground floor completely flooded."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-dark p-3">
+                    <button type="button" class="btn btn-outline" onclick="closeSOSModal()">Cancel</button>
+                    <button type="submit" id="btn-submit-sos-modal" class="btn btn-sos py-2 px-4 fs-6">
+                        <span class="btn-text"><i class="fa-solid fa-tower-broadcast me-2"></i>BROADCAST SOS DISPATCH</span>
+                        <span class="spinner-sm d-none"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ================= Global Loading Spinner Overlay ================= -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="text-center">

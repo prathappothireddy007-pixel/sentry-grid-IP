@@ -10,6 +10,13 @@ from routes.auth import login_required, role_required
 
 teams_bp = Blueprint('teams', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 @teams_bp.route('/api/teams', methods=['GET'])
 @login_required
@@ -37,7 +44,7 @@ def get_teams():
         teams = cursor.fetchall()
         for t in teams:
             for k in ['created_at', 'updated_at']:
-                if t.get(k): t[k] = t[k].strftime('%Y-%m-%d %H:%M:%S')
+                if t.get(k): t[k] = format_datetime(t[k])
             for k in ['latitude', 'longitude']:
                 if t.get(k): t[k] = float(t[k])
 

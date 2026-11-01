@@ -11,6 +11,13 @@ from routes.auth import login_required
 
 messages_bp = Blueprint('messages', __name__)
 
+def format_datetime(val):
+    if val is None:
+        return None
+    if hasattr(val, 'strftime'):
+        return val.strftime('%Y-%m-%d %H:%M:%S')
+    return str(val)
+
 
 @messages_bp.route('/api/requests/<int:request_id>/messages', methods=['GET'])
 @login_required
@@ -54,7 +61,7 @@ def get_messages(request_id):
 
         for m in messages:
             if m.get('created_at'):
-                m['created_at'] = m['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                m['created_at'] = format_datetime(m['created_at'])
 
         return jsonify({'success': True, 'data': messages}), 200
     except Exception as e:
