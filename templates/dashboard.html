@@ -70,6 +70,26 @@
             <span class="badge badge-medium" id="weather-source-badge">Loading...</span>
         </div>
         <div class="card-body">
+            <!-- Place Selector Bar -->
+            <div class="mb-3">
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="small text-muted align-self-center me-1">Quick Select:</span>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Chennai')">Chennai</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Mumbai')">Mumbai</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Delhi')">Delhi</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Kolkata')">Kolkata</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Bangalore')">Bangalore</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Hyderabad')">Hyderabad</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadDashboardWeather('Kochi')">Kochi</button>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="text" id="dashboard-weather-search" class="form-control form-control-sm" placeholder="Search any city or place (e.g. Madurai, Goa, Pune, London)..." onkeydown="if(event.key==='Enter') loadDashboardWeather()">
+                    <button type="button" class="btn btn-sm btn-primary text-nowrap" onclick="loadDashboardWeather()">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i> Check Place
+                    </button>
+                </div>
+            </div>
+
             <div class="weather-widget">
                 <div class="weather-main">
                     <div class="weather-temp" id="weather-temp">--°C</div>

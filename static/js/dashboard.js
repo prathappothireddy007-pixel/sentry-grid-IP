@@ -106,8 +106,15 @@ function renderSeverityChart(bySeverity) {
 }
 
 // External Weather Telemetry (Demonstrating Fetch API requirement)
-function loadDashboardWeather() {
-    const city = (APP_CONFIG && APP_CONFIG.currentUserLocality) ? APP_CONFIG.currentUserLocality : 'Chennai';
+function loadDashboardWeather(selectedCity) {
+    const inputVal = $('#dashboard-weather-search').val();
+    const city = selectedCity || (inputVal ? inputVal.trim() : null) || (APP_CONFIG && APP_CONFIG.currentUserLocality) || 'Chennai';
+
+    if (selectedCity) {
+        $('#dashboard-weather-search').val(selectedCity);
+    }
+
+    $('#weather-description').text(`Querying live telemetry for ${city}...`);
 
     // Demonstrates Fetch API for external weather service
     fetch(`/api/weather?city=${encodeURIComponent(city)}`)
@@ -130,7 +137,7 @@ function loadDashboardWeather() {
             }
         })
         .catch(err => {
-            $('#weather-description').text('Weather telemetry offline');
+            $('#weather-description').text(`Weather telemetry offline for ${city}`);
         });
 }
 

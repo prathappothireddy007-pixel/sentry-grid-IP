@@ -11,6 +11,7 @@ let searchTimeout = null;
 $(document).ready(function() {
     loadAlerts();
     loadExternalWeatherTelemetry();
+    loadMultiRegionWeather();
 
     // Configurable polling for new alerts
     const pollTime = (APP_CONFIG && APP_CONFIG.pollIntervalAlerts) ? APP_CONFIG.pollIntervalAlerts : 30000;
@@ -150,8 +151,15 @@ function getDisasterIcon(type) {
 }
 
 // Fetch Live Weather Telemetry (Demonstrates Fetch API requirement)
-function loadExternalWeatherTelemetry() {
-    const city = (APP_CONFIG && APP_CONFIG.currentUserLocality) ? APP_CONFIG.currentUserLocality : 'Chennai';
+function loadExternalWeatherTelemetry(selectedCity) {
+    const inputVal = $('#alerts-weather-search').val();
+    const city = selectedCity || (inputVal ? inputVal.trim() : null) || (APP_CONFIG && APP_CONFIG.currentUserLocality) || 'Chennai';
+
+    if (selectedCity) {
+        $('#alerts-weather-search').val(selectedCity);
+    }
+
+    $('#telemetry-condition').text(`Scanning atmospheric telemetry for ${city}...`);
 
     fetch(`/api/weather?city=${encodeURIComponent(city)}`)
         .then(res => res.json())
@@ -177,8 +185,53 @@ function loadExternalWeatherTelemetry() {
             }
         })
         .catch(() => {
-            $('#telemetry-condition').text('Telemetry service unavailable');
+            $('#telemetry-condition').text(`Telemetry service unavailable for ${city}`);
         });
+}
+
+// Multi-Place Live Weather Surveillance Grid
+function loadMultiRegionWeather() {
+    const container = document.getElementById('multi-city-weather-grid');
+    if (!container) return;
+
+    const monitoredPlaces = ['Chennai', 'Mumbai', 'Delhi', 'Kolkata', 'Bangalore', 'Hyderabad'];
+    container.innerHTML = '';
+
+    monitoredPlaces.forEach(p => {
+        const col = document.createElement('div');
+        col.className = 'col-12 col-md-4 col-lg-2';
+        col.innerHTML = `
+            <div class="card p-3 h-100 text-center" style="background: #16213e; border: 1px solid #2a2a4a; transition: all 0.3s ease;">
+                <h5 class="fs-6 m-0 text-light mb-1">${escapeHtml(p)}</h5>
+                <div class="fs-4 font-weight-bold text-info my-1" id="multi-temp-${p}">--°C</div>
+                <small class="text-secondary d-block text-truncate mb-2" id="multi-cond-${p}">Fetching...</small>
+                <div class="d-flex justify-content-between text-muted small border-top border-secondary pt-2 mt-auto">
+                    <span><i class="fa-solid fa-droplet text-primary"></i> <span id="multi-rain-${p}">--</span></span>
+                    <span><i class="fa-solid fa-wind text-warning"></i> <span id="multi-wind-${p}">--</span></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline text-info py-0 mt-2" onclick="loadExternalWeatherTelemetry('${p}')" style="font-size: 0.7rem;">
+                    Inspect
+                </button>
+            </div>
+        `;
+        container.appendChild(col);
+
+        // Fetch live telemetry for each monitored place
+        fetch(`/api/weather?city=${encodeURIComponent(p)}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    const d = res.data;
+                    $(`#multi-temp-${p}`).text(`${Math.round(d.temperature)}°C`);
+                    $(`#multi-cond-${p}`).text(d.description);
+                    $(`#multi-rain-${p}`).text(`${d.rainfall}mm`);
+                    $(`#multi-wind-${p}`).text(`${Math.round(d.wind_speed)}kph`);
+                }
+            })
+            .catch(() => {
+                $(`#multi-cond-${p}`).text('Offline');
+            });
+    });
 }
 
 // Automatic Weather Threshold Evaluation (Requirement 6.B)

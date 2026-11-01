@@ -33,6 +33,26 @@
             <span class="badge badge-medium" id="alerts-weather-source">OpenWeatherMap</span>
         </div>
         <div class="card-body">
+            <!-- Place Selector Bar -->
+            <div class="mb-3">
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="small text-muted align-self-center me-1">Quick Select:</span>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Chennai')">Chennai</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Mumbai')">Mumbai</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Delhi')">Delhi</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Kolkata')">Kolkata</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Bangalore')">Bangalore</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Hyderabad')">Hyderabad</button>
+                    <button type="button" class="btn btn-sm btn-outline py-0 px-2" onclick="loadExternalWeatherTelemetry('Kochi')">Kochi</button>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="text" id="alerts-weather-search" class="form-control form-control-sm" placeholder="Check weather in any city (e.g. Madurai, Goa, Pune, London)..." onkeydown="if(event.key==='Enter') loadExternalWeatherTelemetry()">
+                    <button type="button" class="btn btn-sm btn-primary text-nowrap" onclick="loadExternalWeatherTelemetry()">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i> Inspect Place
+                    </button>
+                </div>
+            </div>
+
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <div class="d-flex align-items-center gap-3">
                     <div class="weather-temp text-info" id="telemetry-temp">--°C</div>
@@ -114,6 +134,22 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Region Live Atmospheric Surveillance Grid -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-earth-asia text-info me-2"></i>Multi-Place Regional Weather Surveillance</h3>
+        <span class="text-muted small">Live real-time conditions across major operational zones</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3" id="multi-city-weather-grid">
+            <div class="col-12 text-center py-3 text-muted">
+                <div class="spinner-sm mb-2"></div>
+                <div>Polling multi-region telemetry...</div>
             </div>
         </div>
     </div>
