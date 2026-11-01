@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentryGrid – Real-Time Disaster Alert & Emergency Response</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Custom Dark Theme Stylesheet -->
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="/static/css/responsive.css" rel="stylesheet">
+</head>
+<body class="login-page">
+
+    <div class="login-container">
+        <!-- Logo & Branding -->
+        <div class="login-logo">
+            <h1><i class="fa-solid fa-shield-halved text-danger me-2"></i>SentryGrid</h1>
+            <p>Real-Time Disaster Alert & Emergency Response System</p>
+            <small class="badge badge-medium">CSA4310 – Internet Programming</small>
+        </div>
+
+        <!-- Tab Controls: Login vs Register -->
+        <div class="login-tabs">
+            <button type="button" class="login-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">
+                <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In
+            </button>
+            <button type="button" class="login-tab" id="tab-register-btn" onclick="switchAuthTab('register')">
+                <i class="fa-solid fa-user-plus me-1"></i> Register
+            </button>
+        </div>
+
+        <!-- Alert Banner for Feedback -->
+        <div id="auth-alert" class="alert d-none mb-3" role="alert"></div>
+
+        <!-- ================= Login Form ================= -->
+        <form id="form-login" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="login-username"><i class="fa-solid fa-user me-1"></i> Username <span class="required">*</span></label>
+                <input type="text" id="login-username" class="form-control" placeholder="Enter your username" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="login-password"><i class="fa-solid fa-lock me-1"></i> Password <span class="required">*</span></label>
+                <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block mt-3">
+                <span class="btn-text"><i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Sign In</span>
+                <span class="spinner-sm d-none"></span>
+            </button>
+
+            <!-- Quick Demo Credentials for Academic Evaluation -->
+            <div class="mt-4 pt-3 border-top border-secondary">
+                <label class="text-muted d-block small mb-2"><i class="fa-solid fa-bolt me-1 text-warning"></i> Quick Demo Login (Academic Viva):</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('admin', 'admin123')">
+                        <i class="fa-solid fa-user-shield me-1 text-danger"></i> Admin
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('responder1', 'resp123')">
+                        <i class="fa-solid fa-truck-medical me-1 text-warning"></i> Responder
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="fillCredentials('citizen1', 'citizen123')">
+                        <i class="fa-solid fa-user me-1 text-info"></i> Citizen
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- ================= Register Form ================= -->
+        <form id="form-register" class="d-none" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="reg-username">Username <span class="required">*</span></label>
+                <input type="text" id="reg-username" class="form-control" placeholder="3-50 characters" required minlength="3" maxlength="50">
+            </div>
+
+            <div class="form-group">
+                <label for="reg-fullname">Full Name <span class="required">*</span></label>
+                <input type="text" id="reg-fullname" class="form-control" placeholder="Your official name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="reg-email">Email Address <span class="required">*</span></label>
+                <input type="email" id="reg-email" class="form-control" placeholder="user@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="reg-password">Password <span class="required">*</span></label>
+                <input type="password" id="reg-password" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="reg-role">Role <span class="required">*</span></label>
+                <select id="reg-role" class="form-control" required>
+                    <option value="citizen">Citizen (Alerts, SOS, Shelters)</option>
+                    <option value="responder">Emergency Responder (Rescue & Field Ops)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="reg-phone">Phone Number</label>
+                <input type="tel" id="reg-phone" class="form-control" placeholder="10-digit mobile number">
+            </div>
+
+            <div class="form-group">
+                <label for="reg-locality">Locality / City</label>
+                <input type="text" id="reg-locality" class="form-control" placeholder="e.g. Chennai, T. Nagar">
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline w-100 mb-3" onclick="captureRegistrationGPS()">
+                <i class="fa-solid fa-location-crosshairs me-1 text-danger"></i> <span id="reg-gps-label">Auto-detect GPS Location</span>
+            </button>
+            <input type="hidden" id="reg-lat">
+            <input type="hidden" id="reg-lon">
+
+            <button type="submit" id="btn-reg-submit" class="btn btn-success btn-block">
+                <span class="btn-text"><i class="fa-solid fa-user-plus me-2"></i>Create Account</span>
+                <span class="spinner-sm d-none"></span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- jQuery 3.7.1 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom Scripts -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

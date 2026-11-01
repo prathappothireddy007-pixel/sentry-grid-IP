@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}Module 3 – Shelters & Reports{% endblock %}
+{% block page_title %}Module 3: Shelter Information & Disaster Reports{% endblock %}
+
+{% block content %}
+<!-- Module Objective Banner -->
+<div class="card mb-3" style="background: linear-gradient(135deg, rgba(39,174,96,0.1), rgba(22,33,62,0.9));">
+    <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <h4 class="m-0 text-success"><i class="fa-solid fa-house-chimney-medical me-2"></i>Shelter Logistics & Reporting</h4>
+            <small class="text-muted">Demonstrates Geolocation distance sorting, Leaflet interactive shelter mapping, and analytical CSV reports.</small>
+        </div>
+        <div class="d-flex gap-2">
+            {% if session.get('role') == 'admin' %}
+            <button class="btn btn-success btn-sm" onclick="openCreateShelterModal()">
+                <i class="fa-solid fa-plus me-1"></i> Register Shelter
+            </button>
+            {% endif %}
+            <button class="btn btn-outline btn-sm" onclick="locateUserAndSortShelters()">
+                <i class="fa-solid fa-location-arrow me-1"></i> Find Nearest to Me
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="loadShelters()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet Interactive Shelters Map -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-map text-info me-2"></i>Shelter Geographic Distribution Map</h3>
+        <span class="badge badge-medium" id="shelters-map-count">Loading shelters...</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="map-container">
+            <div id="map-shelters"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Shelters List (Sorted nearest first when GPS is available) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-building-shield text-success me-2"></i>Available Safe Havens & Relief Camps</h3>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small" id="shelter-gps-indicator">Distances based on default location</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3" id="shelters-cards-container">
+            <div class="col-12 text-center py-4 text-muted">
+                <div class="spinner-sm mb-2"></div>
+                <div>Fetching shelter inventory...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disaster Analytics & Reports Section -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-file-invoice text-warning me-2"></i>Official Disaster Reports & Data Export</h3>
+        {% if session.get('role') == 'admin' %}
+        <div class="d-flex gap-2">
+            <a href="/api/reports/csv?type=requests" class="btn btn-sm btn-outline text-success" download>
+                <i class="fa-solid fa-file-csv me-1"></i> Export Incidents CSV
+            </a>
+            <a href="/api/reports/csv?type=resources" class="btn btn-sm btn-outline text-purple" download>
+                <i class="fa-solid fa-file-csv me-1"></i> Export Resources CSV
+            </a>
+            <a href="/api/reports/csv?type=alerts" class="btn btn-sm btn-outline text-danger" download>
+                <i class="fa-solid fa-file-csv me-1"></i> Export Alerts CSV
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <!-- Summary Stats Grid -->
+        <div class="stat-cards mb-4" id="report-stat-cards">
+            <div class="stat-card">
+                <div class="stat-icon blue"><i class="fa-solid fa-shield"></i></div>
+                <div class="stat-info"><h4 id="report-total-requests">--</h4><p>Total Emergency Requests</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="stat-info"><h4 id="report-resolved-requests">--</h4><p>Successfully Rescued</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div>
+                <div class="stat-info"><h4 id="report-pending-requests">--</h4><p>Pending Rescue</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fa-solid fa-bed"></i></div>
+                <div class="stat-info"><h4 id="report-available-beds">--</h4><p>Available Shelter Beds</p></div>
+            </div>
+        </div>
+
+        <!-- Archival Disaster Reports Table -->
+        <h5 class="text-secondary mb-3"><i class="fa-solid fa-folder-open me-2"></i>Situation Reports (SITREPs)</h5>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Report Title</th>
+                        <th>Type</th>
+                        <th>Disaster / Hazard</th>
+                        <th>Impacted Locality</th>
+                        <th>Missing Persons</th>
+                        <th>Casualties</th>
+                        <th>Generated By</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="disaster-reports-tbody">
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">Loading SITREP reports...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================= Modal: Create Shelter (Admin Only) ================= -->
+<div class="modal-overlay" id="modal-create-shelter">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-house-chimney-medical text-success me-2"></i>Register Relief Shelter</h3>
+            <button class="modal-close" onclick="closeCreateShelterModal()">&times;</button>
+        </div>
+        <form id="form-create-shelter" onsubmit="handleCreateShelterSubmit(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sh-name">Shelter Name <span class="required">*</span></label>
+                    <input type="text" id="sh-name" class="form-control" placeholder="e.g. Government Higher Secondary School Relief Camp" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sh-address">Complete Address <span class="required">*</span></label>
+                    <input type="text" id="sh-address" class="form-control" placeholder="Street, ward, area, landmark, pincode" required>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="sh-lat">Latitude <span class="required">*</span></label>
+                        <input type="number" step="any" id="sh-lat" class="form-control" placeholder="e.g. 13.0827" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sh-lon">Longitude <span class="required">*</span></label>
+                        <input type="number" step="any" id="sh-lon" class="form-control" placeholder="e.g. 80.2707" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="sh-capacity">Total Bed Capacity <span class="required">*</span></label>
+                        <input type="number" id="sh-capacity" class="form-control" placeholder="500" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sh-occupancy">Current Occupancy</label>
+                        <input type="number" id="sh-occupancy" class="form-control" placeholder="0" min="0" value="0">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="sh-phone">Emergency Contact Phone</label>
+                        <input type="tel" id="sh-phone" class="form-control" placeholder="Camp warden phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="sh-email">Contact Email</label>
+                        <input type="email" id="sh-email" class="form-control" placeholder="camp@disaster.gov.in">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Available Facilities (comma separated)</label>
+                    <input type="text" id="sh-facilities" class="form-control" placeholder="Drinking Water, Medical Aid, Power Backup, Sanitation, Hot Meals">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeCreateShelterModal()">Cancel</button>
+                <button type="submit" id="btn-submit-shelter" class="btn btn-success">
+                    <span class="btn-text"><i class="fa-solid fa-check me-1"></i> Save Shelter</span>
+                    <span class="spinner-sm d-none"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/shelters.js"></script>
+{% endblock %}

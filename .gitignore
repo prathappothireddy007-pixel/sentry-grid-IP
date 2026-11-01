@@ -1,0 +1,32 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment variables & secrets (Security Requirement)
+.env
+*.env.local
+
+# Databases & local stores
+*.db
+*.sqlite
+*.sqlite3
+sentrygrid_local.db
+
+# User uploads (keep directory with .gitkeep)
+uploads/*
+!uploads/.gitkeep
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

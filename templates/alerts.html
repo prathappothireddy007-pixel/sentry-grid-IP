@@ -1,0 +1,270 @@
+{% extends "layout.html" %}
+
+{% block title %}Module 1 – Disaster Alerts{% endblock %}
+{% block page_title %}Module 1: Disaster Monitoring & Alert System{% endblock %}
+
+{% block content %}
+<!-- Module Objective Header Banner -->
+<div class="card mb-3" style="background: linear-gradient(135deg, rgba(41,128,185,0.1), rgba(22,33,62,0.9));">
+    <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <h4 class="m-0 text-info"><i class="fa-solid fa-satellite-dish me-2"></i>Disaster Alert Engine</h4>
+            <small class="text-muted">Demonstrates Weather API integration, threshold checks, REST API CRUD, and asynchronous polling.</small>
+        </div>
+        <div class="d-flex gap-2">
+            {% if session.get('role') == 'admin' %}
+            <button class="btn btn-danger btn-sm" onclick="openCreateAlertModal()">
+                <i class="fa-solid fa-plus me-1"></i> Issue New Alert
+            </button>
+            {% endif %}
+            <button class="btn btn-outline btn-sm" onclick="loadAlerts()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Weather & Threshold Analysis Banner -->
+<div class="grid-2 mb-4">
+    <!-- Live Weather Card (Fetch API proxy) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-cloud-sun-rain text-info me-2"></i>External Weather Telemetry</h3>
+            <span class="badge badge-medium" id="alerts-weather-source">OpenWeatherMap</span>
+        </div>
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="weather-temp text-info" id="telemetry-temp">--°C</div>
+                    <div>
+                        <h4 class="m-0" id="telemetry-city">{{ session.get('locality', 'Chennai') }}</h4>
+                        <div class="text-muted small" id="telemetry-condition">Analyzing atmosphere...</div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="badge badge-safe" id="telemetry-risk-badge">Normal Conditions</span>
+                </div>
+            </div>
+
+            <div class="weather-details">
+                <div class="weather-detail">
+                    <div class="value" id="telemetry-rain">-- mm/h</div>
+                    <div class="label">Rainfall Rate</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="value" id="telemetry-wind">-- km/h</div>
+                    <div class="label">Wind Velocity</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="value" id="telemetry-humidity">--%</div>
+                    <div class="label">Rel. Humidity</div>
+                </div>
+                <div class="weather-detail">
+                    <div class="value" id="telemetry-pressure">-- hPa</div>
+                    <div class="label">Pressure</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Threshold Alert Evaluation -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-sliders text-warning me-2"></i>Configurable Alert Rules</h3>
+            <button class="btn btn-sm btn-outline" onclick="evaluateWeatherThresholds()">
+                <i class="fa-solid fa-microchip me-1"></i> Check Rules
+            </button>
+        </div>
+        <div class="card-body">
+            <p class="small text-muted mb-2">Automated system compares incoming telemetry against danger thresholds:</p>
+            <div class="table-responsive" style="max-height: 180px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Condition</th>
+                            <th>Threshold</th>
+                            <th>Disaster Category</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threshold-rules-tbody">
+                        <tr>
+                            <td>Rainfall Rate</td>
+                            <td>&gt; 50 mm/h</td>
+                            <td>Flood</td>
+                            <td><span class="badge badge-high">High</span></td>
+                        </tr>
+                        <tr>
+                            <td>Rainfall Rate</td>
+                            <td>&gt; 100 mm/h</td>
+                            <td>Flood</td>
+                            <td><span class="badge badge-critical">Critical</span></td>
+                        </tr>
+                        <tr>
+                            <td>Temperature</td>
+                            <td>&gt; 42°C</td>
+                            <td>Heatwave</td>
+                            <td><span class="badge badge-high">High</span></td>
+                        </tr>
+                        <tr>
+                            <td>Wind Velocity</td>
+                            <td>&gt; 90 km/h</td>
+                            <td>Cyclone</td>
+                            <td><span class="badge badge-critical">Critical</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card">
+    <div class="card-body p-3">
+        <div class="filter-bar m-0">
+            <select id="filter-alert-severity" class="form-control" onchange="loadAlerts()">
+                <option value="">All Severities</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+
+            <select id="filter-alert-type" class="form-control" onchange="loadAlerts()">
+                <option value="">All Disaster Types</option>
+                <option value="flood">Flood</option>
+                <option value="cyclone">Cyclone</option>
+                <option value="earthquake">Earthquake</option>
+                <option value="landslide">Landslide</option>
+                <option value="heatwave">Heatwave</option>
+                <option value="tsunami">Tsunami</option>
+                <option value="wildfire">Wildfire</option>
+                <option value="storm">Severe Storm</option>
+            </select>
+
+            <input type="text" id="filter-alert-locality" class="form-control search-input" placeholder="Search by locality or city..." onkeyup="debounceAlertSearch()">
+
+            <div class="ms-auto text-muted small d-flex align-items-center">
+                <span class="severity-dot critical"></span> Critical
+                <span class="severity-dot high ms-2"></span> High
+                <span class="severity-dot medium ms-2"></span> Medium
+                <span class="severity-dot low ms-2"></span> Low
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Alerts Grid / Feed -->
+<div class="mt-3" id="alerts-container">
+    <div class="empty-state py-5">
+        <div class="spinner-sm mb-2"></div>
+        <p>Loading disaster alerts...</p>
+    </div>
+</div>
+
+<!-- ================= Modal: Create Alert (Admin Only) ================= -->
+<div class="modal-overlay" id="modal-create-alert">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-bullhorn text-danger me-2"></i>Issue Official Disaster Alert</h3>
+            <button class="modal-close" onclick="closeCreateAlertModal()">&times;</button>
+        </div>
+        <form id="form-create-alert" onsubmit="handleCreateAlertSubmit(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="alert-title">Alert Title <span class="required">*</span></label>
+                    <input type="text" id="alert-title" class="form-control" placeholder="e.g. Severe Flood Warning – North Coast" required>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="alert-type">Disaster Category <span class="required">*</span></label>
+                        <select id="alert-type" class="form-control" required>
+                            <option value="flood">Flood</option>
+                            <option value="cyclone">Cyclone</option>
+                            <option value="earthquake">Earthquake</option>
+                            <option value="landslide">Landslide</option>
+                            <option value="heatwave">Heatwave</option>
+                            <option value="tsunami">Tsunami</option>
+                            <option value="wildfire">Wildfire</option>
+                            <option value="storm">Severe Storm</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alert-severity">Severity Level <span class="required">*</span></label>
+                        <select id="alert-severity" class="form-control" required>
+                            <option value="Critical">Critical (Immediate danger to life)</option>
+                            <option value="High" selected>High (Major disruption & risk)</option>
+                            <option value="Medium">Medium (Cautionary advisory)</option>
+                            <option value="Low">Low (Informational update)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="alert-location">Affected Locality / City <span class="required">*</span></label>
+                    <input type="text" id="alert-location" class="form-control" placeholder="e.g. Chennai, Velachery Basin" required>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="alert-lat">Latitude (optional)</label>
+                        <input type="number" step="any" id="alert-lat" class="form-control" placeholder="e.g. 13.0827">
+                    </div>
+                    <div class="form-group">
+                        <label for="alert-lon">Longitude (optional)</label>
+                        <input type="number" step="any" id="alert-lon" class="form-control" placeholder="e.g. 80.2707">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="alert-description">Detailed Description</label>
+                    <textarea id="alert-description" class="form-control" placeholder="Explain the situation, meteorological data, and expected timeline..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="alert-instructions">Public Safety Instructions</label>
+                    <textarea id="alert-instructions" class="form-control" placeholder="e.g. Move to higher ground immediately. Keep emergency supplies ready. Do not cross flood waters."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeCreateAlertModal()">Cancel</button>
+                <button type="submit" id="btn-submit-alert" class="btn btn-danger">
+                    <span class="btn-text"><i class="fa-solid fa-paper-plane me-1"></i> Broadcast Alert</span>
+                    <span class="spinner-sm d-none"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= Modal: View Safety Instructions ================= -->
+<div class="modal-overlay" id="modal-view-instructions">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="view-alert-modal-title"><i class="fa-solid fa-shield-virus text-warning me-2"></i>Safety Advisory</h3>
+            <button class="modal-close" onclick="closeSafetyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <span class="badge" id="view-alert-severity-badge">High</span>
+                <span class="text-muted ms-2" id="view-alert-location-text">Location</span>
+            </div>
+            <h5 class="text-secondary mb-2">Description</h5>
+            <p id="view-alert-desc" class="mb-3">No description provided.</p>
+            <h5 class="text-warning mb-2"><i class="fa-solid fa-list-check me-1"></i>Recommended Safety Measures</h5>
+            <div id="view-alert-instructions-content" class="p-3 bg-secondary rounded text-light"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" onclick="closeSafetyModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/alerts.js"></script>
+{% endblock %}

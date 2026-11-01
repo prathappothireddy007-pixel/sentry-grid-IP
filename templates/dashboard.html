@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Operational Dashboard{% endblock %}
+
+{% block content %}
+<!-- Quick Emergency SOS Banner (Visible to Citizens) -->
+{% if session.get('role') == 'citizen' %}
+<div class="card mb-4 border-danger" style="background: linear-gradient(135deg, rgba(233,69,96,0.15), rgba(22,33,62,0.95));">
+    <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+        <div>
+            <h3 class="text-danger m-0 mb-1"><i class="fa-solid fa-triangle-exclamation me-2"></i>Immediate Emergency Assistance?</h3>
+            <p class="text-muted m-0">Click SOS to instantly broadcast your current GPS coordinates to emergency responders.</p>
+        </div>
+        <button class="btn btn-sos text-nowrap" id="dashboard-sos-btn" onclick="triggerQuickSOS()">
+            <i class="fa-solid fa-tower-broadcast me-2"></i>SEND SOS NOW
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Key Metrics Stat Cards -->
+<div class="stat-cards" id="dashboard-stat-cards">
+    <div class="stat-card">
+        <div class="stat-icon red">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="stat-info">
+            <h4 id="stat-active-alerts">--</h4>
+            <p>Active Disaster Alerts</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon orange">
+            <i class="fa-solid fa-truck-medical"></i>
+        </div>
+        <div class="stat-info">
+            <h4 id="stat-pending-requests">--</h4>
+            <p>Pending Emergencies</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon green">
+            <i class="fa-solid fa-life-ring"></i>
+        </div>
+        <div class="stat-info">
+            <h4 id="stat-resolved-incidents">--</h4>
+            <p>Rescued / Resolved</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon blue">
+            <i class="fa-solid fa-people-group"></i>
+        </div>
+        <div class="stat-info">
+            <h4 id="stat-available-teams">--</h4>
+            <p>Available Teams</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Weather Widget (Fetch API) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-cloud-bolt text-info me-2"></i>Live Weather Conditions</h3>
+            <span class="badge badge-medium" id="weather-source-badge">Loading...</span>
+        </div>
+        <div class="card-body">
+            <div class="weather-widget">
+                <div class="weather-main">
+                    <div class="weather-temp" id="weather-temp">--°C</div>
+                    <div>
+                        <h4 class="m-0" id="weather-city">Chennai</h4>
+                        <div class="weather-desc" id="weather-description">Fetching data...</div>
+                    </div>
+                </div>
+
+                <div class="weather-details">
+                    <div class="weather-detail">
+                        <div class="value" id="weather-humidity">--%</div>
+                        <div class="label">Humidity</div>
+                    </div>
+                    <div class="weather-detail">
+                        <div class="value" id="weather-wind">-- km/h</div>
+                        <div class="label">Wind Speed</div>
+                    </div>
+                    <div class="weather-detail">
+                        <div class="value" id="weather-rain">-- mm</div>
+                        <div class="label">Precipitation</div>
+                    </div>
+                    <div class="weather-detail">
+                        <div class="value" id="weather-pressure">-- hPa</div>
+                        <div class="label">Pressure</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-end">
+                <small class="text-muted me-2" id="weather-updated-time">Updated: --</small>
+                <button class="btn btn-sm btn-outline" onclick="loadDashboardWeather()">
+                    <i class="fa-solid fa-rotate-right me-1"></i> Refresh Weather
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Chart: Alerts by Severity -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie text-warning me-2"></i>Disaster Alerts by Severity</h3>
+        </div>
+        <div class="card-body">
+            <div style="position: relative; height: 260px; width: 100%;">
+                <canvas id="chart-alerts-severity"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Alerts Section -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-bell text-danger me-2"></i>Latest Active Disaster Alerts</h3>
+        <a href="/alerts" class="btn btn-sm btn-outline">View All Alerts <i class="fa-solid fa-arrow-right ms-1"></i></a>
+    </div>
+    <div class="card-body">
+        <div id="dashboard-alerts-list">
+            <div class="empty-state py-3">
+                <div class="spinner-sm mb-2"></div>
+                <p>Loading active disaster alerts...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Emergency Incidents Section -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-hand-holding-medical text-orange me-2"></i>Recent Emergency Incidents</h3>
+        <a href="/emergencies" class="btn btn-sm btn-outline">Rescue Board <i class="fa-solid fa-arrow-right ms-1"></i></a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Citizen / Contact</th>
+                        <th>Location</th>
+                        <th>Priority</th>
+                        <th>Status Workflow</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboard-requests-tbody">
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">Loading emergency requests...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

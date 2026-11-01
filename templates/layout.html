@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} – SentryGrid</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Custom Theme CSS -->
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="/static/css/responsive.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- ================= Sidebar ================= -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-shield-halved text-danger me-2"></i>SentryGrid</h2>
+                <div class="subtitle">Disaster Alert & Emergency Response</div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section-title">Overview</div>
+                <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <div class="nav-section-title">Academic Modules</div>
+                <!-- Module 1 -->
+                <a href="/alerts" class="nav-link {% if request.path == '/alerts' %}active{% endif %}">
+                    <i class="fa-solid fa-triangle-exclamation text-warning"></i>
+                    <span>Disaster Alerts</span>
+                    <span class="nav-badge d-none" id="sidebar-alert-badge">0</span>
+                </a>
+
+                <!-- Module 2 -->
+                <a href="/emergencies" class="nav-link {% if request.path == '/emergencies' %}active{% endif %}">
+                    <i class="fa-solid fa-truck-medical text-danger"></i>
+                    <span>Emergency Rescue</span>
+                    <span class="nav-badge d-none" id="sidebar-emergency-badge">0</span>
+                </a>
+
+                <!-- Module 3 -->
+                <a href="/shelters" class="nav-link {% if request.path == '/shelters' %}active{% endif %}">
+                    <i class="fa-solid fa-house-chimney text-info"></i>
+                    <span>Shelters & Reports</span>
+                </a>
+
+                {% if session.get('role') in ['admin', 'responder'] %}
+                <div class="nav-section-title">Coordination</div>
+                <a href="/teams" class="nav-link {% if request.path == '/teams' %}active{% endif %}">
+                    <i class="fa-solid fa-people-group text-success"></i>
+                    <span>Response Teams</span>
+                </a>
+                {% endif %}
+
+                {% if session.get('role') == 'admin' %}
+                <a href="/resources" class="nav-link {% if request.path == '/resources' %}active{% endif %}">
+                    <i class="fa-solid fa-boxes-stacked text-purple"></i>
+                    <span>Resource Inventory</span>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar User Profile Footer -->
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="sidebar-avatar">
+                        {{ session.get('full_name', 'U')[0] | upper }}
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="sidebar-user-name">{{ session.get('full_name', 'User') }}</div>
+                        <div class="user-role badge {% if session.get('role') == 'admin' %}badge-critical{% elif session.get('role') == 'responder' %}badge-high{% else %}badge-medium{% endif %}">
+                            {{ session.get('role', 'citizen') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ================= Main Content Container ================= -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+
+                <div class="top-bar-right">
+                    <!-- Notifications Trigger -->
+                    <div class="notification-bell" id="notif-bell-btn" onclick="toggleNotificationPanel()" title="Notifications">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="notification-count d-none" id="notif-count-badge">0</span>
+                    </div>
+
+                    <!-- User Locality Tag -->
+                    <div class="badge badge-medium d-none d-md-inline-flex">
+                        <i class="fa-solid fa-location-dot me-1"></i> <span id="topbar-locality">{{ session.get('locality', 'Chennai') }}</span>
+                    </div>
+
+                    <!-- Logout Button -->
+                    <button class="btn btn-sm btn-outline" onclick="handleLogout()" title="Sign Out">
+                        <i class="fa-solid fa-arrow-right-from-bracket me-1 text-danger"></i> Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Body Content -->
+            <main class="page-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- ================= Notification Slide-Over Drawer ================= -->
+    <div class="notif-panel" id="notif-panel">
+        <div class="notif-panel-header">
+            <h3 class="m-0"><i class="fa-solid fa-bell me-2 text-warning"></i>Notifications</h3>
+            <button class="modal-close" onclick="toggleNotificationPanel()">&times;</button>
+        </div>
+        <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
+            <small class="text-muted" id="notif-panel-status">Recent updates</small>
+            <button class="btn btn-sm btn-outline" onclick="loadNotifications(true)">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+            </button>
+        </div>
+        <div id="notif-list-container">
+            <div class="empty-state py-4">
+                <i class="fa-solid fa-bell-slash"></i>
+                <p>No new notifications</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= Global Loading Spinner Overlay ================= -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="text-center">
+            <div class="spinner mb-3"></div>
+            <div class="text-light" id="loading-message">Processing request...</div>
+        </div>
+    </div>
+
+    <!-- ================= Toast Notifications ================= -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Script Libraries -->
+    <!-- jQuery 3.7.1 -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Chart.js 4.4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Global Application Configuration for JavaScript -->
+    <script>
+        const APP_CONFIG = {
+            currentUserId: {{ session.get('user_id', 0) }},
+            currentUserRole: '{{ session.get("role", "citizen") }}',
+            currentUserName: '{{ session.get("full_name", "") }}',
+            currentUserLocality: '{{ session.get("locality", "") }}',
+            currentUserLat: {{ session.get('latitude') if session.get('latitude') else 'null' }},
+            currentUserLon: {{ session.get('longitude') if session.get('longitude') else 'null' }},
+            pollIntervalAlerts: {{ config.POLL_ALERTS if config else 30000 }},
+            pollIntervalRequests: {{ config.POLL_REQUESTS if config else 15000 }},
+            pollIntervalMessages: {{ config.POLL_MESSAGES if config else 5000 }},
+            pollIntervalDashboard: {{ config.POLL_DASHBOARD if config else 60000 }}
+        };
+    </script>
+
+    <!-- Main Common JS -->
+    <script src="/static/js/main.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
