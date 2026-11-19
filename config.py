@@ -35,7 +35,7 @@ class Config:
     OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
 
     # File upload settings
-    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+    UPLOAD_FOLDER = '/tmp/uploads' if os.getenv('VERCEL') else os.getenv('UPLOAD_FOLDER', 'uploads')
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # 5MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -57,7 +57,7 @@ def allowed_file(filename):
 
 _use_fallback = False
 _fallback_initialized = False
-SQLITE_DB_PATH = os.path.join(os.path.dirname(__file__), 'sentrygrid_render.db')
+SQLITE_DB_PATH = '/tmp/sentrygrid_render.db' if os.getenv('VERCEL') else os.path.join(os.path.dirname(__file__), 'sentrygrid_render.db')
 
 class SQLiteDictCursor:
     """Cursor wrapper for SQLite that mimics mysql.connector dictionary cursor."""
