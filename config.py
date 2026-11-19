@@ -238,6 +238,10 @@ def _init_cloud_schema():
         from werkzeug.security import generate_password_hash
         c.execute("""
             INSERT INTO users (id, username, email, password_hash, full_name, role, phone, locality, latitude, longitude)
+            VALUES (192411184, '192411184', '192411184@sentrygrid.org', ?, 'Administrator (192411184)', 'admin', '9876543219', 'Chennai', 13.0827, 80.2707)
+        """, (generate_password_hash('katam@123'),))
+        c.execute("""
+            INSERT INTO users (id, username, email, password_hash, full_name, role, phone, locality, latitude, longitude)
             VALUES (1, 'admin', 'admin@sentrygrid.com', ?, 'System Administrator', 'admin', '9876543210', 'Chennai', 13.0827, 80.2707)
         """, (generate_password_hash('admin123'),))
         c.execute("""

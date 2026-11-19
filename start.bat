@@ -86,9 +86,10 @@ echo.
 echo ====================================================================
 echo   Server is running at: http://localhost:5000
 echo   Default Accounts:
-echo     - Admin:     admin / admin123
-echo     - Responder: responder1 / resp123
-echo     - Citizen:   citizen1 / citizen123
+echo     - Primary Admin: 192411184 / katam@123
+echo     - Admin:         admin / admin123
+echo     - Responder:     responder1 / resp123
+echo     - Citizen:       citizen1 / citizen123
 echo.
 echo   Press Ctrl+C to stop the server.
 echo ====================================================================

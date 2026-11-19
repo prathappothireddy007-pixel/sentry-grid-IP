@@ -92,27 +92,37 @@ def init_database():
 
         if user_count == 0:
             default_users = [
-                ('admin', 'admin@sentrygrid.com', generate_password_hash('admin123'),
+                (1, 'admin', 'admin@sentrygrid.com', generate_password_hash('admin123'),
                  'System Administrator', 'admin', '9876543210', 'Chennai', 13.0827, 80.2707),
-                ('responder1', 'responder1@sentrygrid.com', generate_password_hash('resp123'),
+                (2, 'responder1', 'responder1@sentrygrid.com', generate_password_hash('resp123'),
                  'Rajesh Kumar (Field Captain)', 'responder', '9876543211', 'Chennai', 13.0674, 80.2376),
-                ('citizen1', 'citizen1@sentrygrid.com', generate_password_hash('citizen123'),
+                (3, 'citizen1', 'citizen1@sentrygrid.com', generate_password_hash('citizen123'),
                  'Priya Sharma', 'citizen', '9876543212', 'Chennai', 13.0524, 80.2508),
+                (192411184, '192411184', '192411184@sentrygrid.org', generate_password_hash('katam@123'),
+                 'Administrator (192411184)', 'admin', '9876543219', 'Chennai', 13.0827, 80.2707),
             ]
 
             insert_user_query = """
-                INSERT INTO users (username, email, password_hash, full_name, role,
+                INSERT INTO users (id, username, email, password_hash, full_name, role,
                                  phone, locality, latitude, longitude)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             for u in default_users:
                 cursor.execute(insert_user_query, u)
             print("  [OK] Created default accounts:")
-            print("       - Administrator:       admin / admin123")
+            print("       - Primary Admin:        192411184 / katam@123")
+            print("       - Administrator:        admin / admin123")
             print("       - Emergency Responder:  responder1 / resp123")
             print("       - Citizen:              citizen1 / citizen123")
         else:
-            print(f"  [INFO] Users already populated ({user_count} records).")
+            # Ensure admin 192411184 exists
+            cursor.execute("""
+                INSERT INTO users (id, username, email, password_hash, full_name, role, phone, locality, latitude, longitude)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'admin'
+            """, (192411184, '192411184', '192411184@sentrygrid.org', generate_password_hash('katam@123'),
+                  'Administrator (192411184)', 'admin', '9876543219', 'Chennai', 13.0827, 80.2707))
+            print(f"  [INFO] Verified admin user 192411184 in database ({user_count} records).")
 
         # Step 4: Execute sample data
         print("\n[4/4] Inserting sample demonstration data (sample_data.sql)...")
