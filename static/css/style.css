@@ -1011,53 +1011,86 @@ textarea.form-control {
 }
 
 /* ============================================================
-   Weather Widget
+   Weather Widget & Environmental Telemetry
    ============================================================ */
 .weather-widget {
-    background: linear-gradient(135deg, var(--bg-card), #1a2744);
+    background: linear-gradient(135deg, rgba(22, 33, 62, 0.95), rgba(15, 52, 96, 0.85)) !important;
     border-radius: var(--radius);
-    padding: 20px;
-    border: 1px solid var(--border-color);
+    padding: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .weather-main {
     display: flex;
     align-items: center;
     gap: 20px;
-    margin-bottom: 15px;
+    margin-bottom: 18px;
 }
 
 .weather-temp {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 2.8rem !important;
+    font-weight: 800 !important;
+    color: #00d2d3 !important; /* High-contrast vivid cyan */
+    text-shadow: 0 0 20px rgba(0, 210, 211, 0.45);
+    line-height: 1;
+}
+
+.weather-main h4 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 1.45rem !important;
+    margin: 0 !important;
+    letter-spacing: 0.3px;
 }
 
 .weather-desc {
     text-transform: capitalize;
-    color: var(--text-secondary);
+    color: #94a3b8 !important; /* Crisp readable slate */
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-top: 3px;
 }
 
 .weather-details {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 12px;
 }
 
 .weather-detail {
     text-align: center;
-    padding: 10px;
-    background: var(--bg-secondary);
+    padding: 12px 10px;
+    background: rgba(10, 15, 30, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: var(--radius-sm);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    transition: var(--transition);
+}
+
+.weather-detail:hover {
+    background: rgba(15, 25, 50, 0.9) !important;
+    border-color: rgba(0, 210, 211, 0.4) !important;
+    transform: translateY(-2px);
 }
 
 .weather-detail .value {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important; /* Pure high-contrast white */
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+    display: block;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .weather-detail .label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #94a3b8 !important; /* High-contrast clear subtitle */
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: block;
 }
 
 /* ============================================================
