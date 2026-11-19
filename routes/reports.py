@@ -74,6 +74,38 @@ def get_summary_report():
         shelter_capacity = int(shelter_row['cap'])
         shelter_occupancy = int(shelter_row['occ'])
 
+        cursor.execute("SELECT name, total_capacity, current_occupancy FROM shelters WHERE is_active=TRUE LIMIT 6")
+        shelters_breakdown = cursor.fetchall()
+
+        # Hospital stats
+        cursor.execute("SELECT COUNT(*) as c, COALESCE(SUM(total_beds),0) as tb, COALESCE(SUM(available_beds),0) as ab FROM hospitals WHERE is_active=TRUE")
+        hosp_row = cursor.fetchone()
+        hosp_stats = {
+            'total': hosp_row['c'] if hosp_row else 0,
+            'total_beds': int(hosp_row['tb']) if hosp_row else 0,
+            'available_beds': int(hosp_row['ab']) if hosp_row else 0
+        }
+
+        # Missing Persons stats
+        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN status IN ('Found','Reunited') THEN 1 ELSE 0 END) as resolved, SUM(CASE WHEN status='Missing' THEN 1 ELSE 0 END) as missing FROM missing_persons")
+        mp_row = cursor.fetchone()
+        mp_stats = {
+            'total': mp_row['total'] if mp_row else 0,
+            'found': int(mp_row['resolved'] or 0) if mp_row else 0,
+            'missing': int(mp_row['missing'] or 0) if mp_row else 0
+        }
+
+        # 7-Day Incident Trend Timeline
+        cursor.execute("""
+            SELECT DATE_FORMAT(created_at, '%b %d') as dt_label, COUNT(*) as cnt 
+            FROM emergency_requests 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at), DATE_FORMAT(created_at, '%b %d')
+            ORDER BY DATE(created_at) ASC
+        """)
+        timeline_rows = cursor.fetchall()
+        timeline_data = [{'label': r['dt_label'], 'count': r['cnt']} for r in timeline_rows]
+
         # Alerts by severity (for chart)
         cursor.execute("SELECT severity, COUNT(*) as c FROM disaster_alerts WHERE is_active=TRUE GROUP BY severity")
         alerts_by_severity = {r['severity']: r['c'] for r in cursor.fetchall()}
@@ -85,7 +117,8 @@ def get_summary_report():
                 'requests': {
                     'total': total_requests, 'pending': pending_requests,
                     'resolved': resolved_requests, 'sos_count': sos_count,
-                    'by_type': requests_by_type, 'by_status': requests_by_status
+                    'by_type': requests_by_type, 'by_status': requests_by_status,
+                    'timeline': timeline_data
                 },
                 'teams': teams_by_status,
                 'resources': {'low_stock': low_stock, 'by_category': resources_by_cat},
@@ -93,8 +126,11 @@ def get_summary_report():
                     'active': active_shelters,
                     'total_capacity': shelter_capacity,
                     'current_occupancy': shelter_occupancy,
-                    'available': shelter_capacity - shelter_occupancy
+                    'available': shelter_capacity - shelter_occupancy,
+                    'breakdown': shelters_breakdown
                 },
+                'hospitals': hosp_stats,
+                'missing_persons': mp_stats,
                 'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
         }), 200

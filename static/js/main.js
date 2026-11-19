@@ -407,6 +407,86 @@ function handleLogout() {
 }
 
 // ============================================================
+// User Profile Modal Controller
+// ============================================================
+function openProfileModal() {
+    $.ajax({
+        url: '/api/profile',
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            if (res.success && res.data) {
+                const u = res.data;
+                $('#profile-display-name').text(u.full_name || u.username);
+                $('#profile-input-fullname').val(u.full_name || '');
+                $('#profile-input-phone').val(u.phone || '');
+                $('#profile-input-locality').val(u.locality || '');
+                $('#profile-input-lat').val(u.latitude !== null ? u.latitude : 13.0827);
+                $('#profile-input-lon').val(u.longitude !== null ? u.longitude : 80.2707);
+            }
+            $('#modal-user-profile').addClass('active');
+        },
+        error: function() {
+            $('#modal-user-profile').addClass('active');
+        }
+    });
+}
+
+function closeProfileModal() {
+    $('#modal-user-profile').removeClass('active');
+}
+
+function handleProfileUpdateSubmit(e) {
+    e.preventDefault();
+    const btn = $('#btn-save-profile');
+    btn.prop('disabled', true);
+    btn.find('.btn-text').addClass('d-none');
+    btn.find('.spinner-sm').removeClass('d-none');
+
+    const payload = {
+        full_name: $('#profile-input-fullname').val().trim(),
+        phone: $('#profile-input-phone').val().trim(),
+        locality: $('#profile-input-locality').val().trim(),
+        latitude: parseFloat($('#profile-input-lat').val()) || null,
+        longitude: parseFloat($('#profile-input-lon').val()) || null
+    };
+
+    $.ajax({
+        url: '/api/profile',
+        type: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        dataType: 'json',
+        success: function(res) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            if (res.success) {
+                showToast('success', 'Profile and emergency settings updated successfully.');
+                if (payload.full_name) {
+                    $('#sidebar-user-name').text(payload.full_name);
+                    $('#sidebar-avatar').text(payload.full_name.charAt(0).toUpperCase());
+                }
+                if (payload.locality) {
+                    $('#topbar-locality').text(payload.locality);
+                }
+                closeProfileModal();
+            } else {
+                showToast('error', res.message || 'Update failed.');
+            }
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+            const err = (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to update profile.';
+            showToast('error', err);
+        }
+    });
+}
+
+// ============================================================
 // Global Polling Scheduler
 // ============================================================
 $(document).ready(function() {

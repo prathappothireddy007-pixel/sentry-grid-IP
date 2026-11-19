@@ -169,6 +169,14 @@ def restock_resource(resource_id):
         new_qty = res['quantity'] + add_qty
         cursor.execute("UPDATE resources SET quantity=%s, last_restocked=NOW() WHERE id=%s",
                        (new_qty, resource_id))
+
+        # Log movement audit
+        cursor.execute("""
+            INSERT INTO resource_movements 
+            (resource_id, movement_type, quantity, destination_type, destination_id, notes, performed_by)
+            VALUES (%s, 'restock', %s, 'inventory', NULL, %s, %s)
+        """, (resource_id, add_qty, data.get('notes', 'Stock replenished via console'), session['user_id']))
+
         conn.commit()
 
         return jsonify({
@@ -179,6 +187,118 @@ def restock_resource(resource_id):
     except Exception as e:
         if conn: conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        close_db_connection(conn, cursor)
+
+
+@resources_bp.route('/api/resources/<int:resource_id>/allocate', methods=['POST'])
+@role_required('admin')
+def allocate_resource(resource_id):
+    """
+    Allocate stock to a shelter, hospital, or field squad.
+    Guarantees no negative inventory balance and records immutable movement log.
+    JSON: {quantity, destination_type, destination_id, notes}
+    """
+    conn = None
+    cursor = None
+    try:
+        data = request.get_json()
+        if not data or 'quantity' not in data:
+            return jsonify({'success': False, 'message': 'Allocation quantity is required.'}), 400
+
+        qty_to_allocate = int(data['quantity'])
+        if qty_to_allocate <= 0:
+            return jsonify({'success': False, 'message': 'Allocation quantity must be greater than zero.'}), 400
+
+        dest_type = data.get('destination_type', 'shelter')
+        dest_id = data.get('destination_id')
+        notes = data.get('notes', '').strip()
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT id, name, quantity, unit FROM resources WHERE id=%s", (resource_id,))
+        res = cursor.fetchone()
+        if not res:
+            return jsonify({'success': False, 'message': 'Resource not found.'}), 404
+
+        if res['quantity'] < qty_to_allocate:
+            return jsonify({
+                'success': False,
+                'message': f"Insufficient stock. Requested {qty_to_allocate} {res['unit']}, but only {res['quantity']} {res['unit']} available."
+            }), 400
+
+        new_qty = res['quantity'] - qty_to_allocate
+        cursor.execute("UPDATE resources SET quantity=%s WHERE id=%s", (new_qty, resource_id))
+
+        cursor.execute("""
+            INSERT INTO resource_movements 
+            (resource_id, movement_type, quantity, destination_type, destination_id, notes, performed_by)
+            VALUES (%s, 'allocated', %s, %s, %s, %s, %s)
+        """, (resource_id, qty_to_allocate, dest_type, dest_id, notes or None, session['user_id']))
+
+        conn.commit()
+        return jsonify({
+            'success': True,
+            'message': f"Successfully dispatched {qty_to_allocate} {res['unit']} of {res['name']}.",
+            'data': {
+                'id': resource_id,
+                'allocated_quantity': qty_to_allocate,
+                'remaining_stock': new_qty
+            }
+        }), 200
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({'success': False, 'message': f'Allocation failed: {str(e)}'}), 500
+    finally:
+        close_db_connection(conn, cursor)
+
+
+@resources_bp.route('/api/resources/movements', methods=['GET'])
+@login_required
+def get_resource_movements():
+    """
+    Fetch complete audit trail of resource restocks and allocations.
+    Returns chronological ledger with user names, destination details, and timestamps.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        res_id = request.args.get('resource_id')
+        m_type = request.args.get('movement_type')
+
+        query = """
+            SELECT rm.id, rm.resource_id, rm.movement_type, rm.quantity,
+                   rm.destination_type, rm.destination_id, rm.notes, rm.created_at,
+                   r.name as resource_name, r.category as resource_category, r.unit,
+                   u.full_name as performed_by_name, u.role as performed_by_role
+            FROM resource_movements rm
+            JOIN resources r ON rm.resource_id = r.id
+            JOIN users u ON rm.performed_by = u.id
+            WHERE 1=1
+        """
+        params = []
+        if res_id:
+            query += " AND rm.resource_id = %s"
+            params.append(int(res_id))
+        if m_type:
+            query += " AND rm.movement_type = %s"
+            params.append(m_type)
+
+        query += " ORDER BY rm.created_at DESC LIMIT 100"
+        cursor.execute(query, params)
+        movements = cursor.fetchall()
+
+        for m in movements:
+            if m.get('created_at'):
+                m['created_at'] = format_datetime(m['created_at'])
+
+        return jsonify({'success': True, 'data': movements}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Failed to retrieve audit trail: {str(e)}'}), 500
     finally:
         close_db_connection(conn, cursor)
 

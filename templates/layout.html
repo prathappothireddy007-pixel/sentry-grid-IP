@@ -11,8 +11,8 @@
     <!-- Leaflet Map CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Custom Theme CSS -->
-    <link href="/static/css/style.css" rel="stylesheet">
-    <link href="/static/css/responsive.css" rel="stylesheet">
+    <link href="/static/css/style.css?v=20261119_3" rel="stylesheet">
+    <link href="/static/css/responsive.css?v=20261119_3" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -50,7 +50,13 @@
                 <!-- Module 3 -->
                 <a href="/shelters" class="nav-link {% if request.path == '/shelters' %}active{% endif %}">
                     <i class="fa-solid fa-house-chimney text-info"></i>
-                    <span>Shelters & Reports</span>
+                    <span>Shelters & Hospitals</span>
+                </a>
+
+                <a href="/missing-persons" class="nav-link {% if request.path == '/missing-persons' %}active{% endif %}">
+                    <i class="fa-solid fa-person-circle-question text-danger"></i>
+                    <span>Missing Persons</span>
+                    <span class="nav-badge d-none" id="sidebar-mp-badge">0</span>
                 </a>
 
                 {% if session.get('role') in ['admin', 'responder'] %}
@@ -71,7 +77,7 @@
 
             <!-- Sidebar User Profile Footer -->
             <div class="sidebar-footer">
-                <div class="user-info">
+                <div class="user-info cursor-pointer" onclick="openProfileModal()" title="View and Edit Profile">
                     <div class="user-avatar" id="sidebar-avatar">
                         {{ session.get('full_name', 'U')[0] | upper }}
                     </div>
@@ -81,6 +87,9 @@
                             {{ session.get('role', 'citizen') }}
                         </div>
                     </div>
+                    <button class="btn btn-sm btn-link text-muted p-0 ms-auto" type="button" onclick="event.stopPropagation(); openProfileModal();" title="Account Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
                 </div>
             </div>
         </aside>
@@ -89,14 +98,17 @@
         <div class="main-content">
             <!-- Top Bar -->
             <header class="top-bar">
-                <div class="top-bar-left">
+                <div class="top-bar-left d-flex align-items-center gap-3">
                     <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()">
                         <i class="fa-solid fa-bars"></i>
                     </button>
-                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                    <h1 class="m-0 fs-4">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <span class="badge d-none d-lg-inline-flex" style="background: rgba(243, 156, 18, 0.15); border: 1px solid #f39c12; color: #f39c12; font-size: 0.72rem; letter-spacing: 0.4px;">
+                        <i class="fa-solid fa-graduation-cap me-1"></i> ACADEMIC SIMULATION
+                    </span>
                 </div>
 
-                <div class="top-bar-right">
+                <div class="top-bar-right d-flex align-items-center gap-2">
                     <!-- Notifications Trigger -->
                     <div class="notification-bell" id="notif-bell-btn" onclick="toggleNotificationPanel()" title="Notifications">
                         <i class="fa-solid fa-bell"></i>
@@ -104,7 +116,7 @@
                     </div>
 
                     <!-- User Locality Tag -->
-                    <div class="badge badge-medium d-none d-md-inline-flex">
+                    <div class="badge badge-medium d-none d-md-inline-flex cursor-pointer" onclick="openProfileModal()" title="Click to change location">
                         <i class="fa-solid fa-location-dot me-1"></i> <span id="topbar-locality">{{ session.get('locality', 'Chennai') }}</span>
                     </div>
 
@@ -118,6 +130,21 @@
             <!-- Page Body Content -->
             <main class="page-content">
                 {% block content %}{% endblock %}
+
+                <!-- Academic Capstone Project Footer -->
+                <footer class="p-3 text-center border-top border-secondary mt-5 rounded" style="background: rgba(10, 15, 30, 0.5); font-size: 0.8rem; color: #64748b;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <strong class="text-light">SentryGrid v2.0</strong> &bull; Real-Time Disaster Alert & Emergency Response System
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981;"><i class="fa-solid fa-cloud-arrow-down me-1"></i>LIVE USGS & METEO APIs</span>
+                            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8;"><i class="fa-solid fa-database me-1"></i>SYSTEM DB CONNECTED</span>
+                            <span class="badge" style="background: rgba(243, 156, 18, 0.15); color: #f39c12; border: 1px solid #f39c12;"><i class="fa-solid fa-graduation-cap me-1"></i>ACADEMIC DEMO MODE</span>
+                        </div>
+                        <div>CSA4310: Internet Programming Capstone</div>
+                    </div>
+                </footer>
             </main>
         </div>
     </div>
@@ -144,7 +171,7 @@
 
     <!-- ================= Modal: Emergency SOS Place Selection ================= -->
     <div class="modal-overlay" id="modal-sos-dispatch">
-        <div class="modal custom-modal-box" style="max-width: 580px !important; border: 2px solid #e94560; box-shadow: 0 0 35px rgba(233, 69, 96, 0.5) !important;">
+        <div class="custom-modal-box" style="max-width: 580px !important; border: 2px solid #e94560; box-shadow: 0 0 35px rgba(233, 69, 96, 0.5) !important;">
             <div class="modal-header bg-danger text-white py-3">
                 <h3 class="m-0 fs-5"><i class="fa-solid fa-triangle-exclamation me-2"></i>EMERGENCY SOS DISPATCH</h3>
                 <button class="modal-close text-white" onclick="closeSOSModal()">&times;</button>
@@ -233,6 +260,63 @@
                     <button type="button" class="btn btn-outline" onclick="closeSOSModal()">Cancel</button>
                     <button type="submit" id="btn-submit-sos-modal" class="btn btn-sos py-2 px-4 fs-6">
                         <span class="btn-text"><i class="fa-solid fa-tower-broadcast me-2"></i>BROADCAST SOS DISPATCH</span>
+                        <span class="spinner-sm d-none"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= Modal: User Profile & Locality Settings ================= -->
+    <div class="modal-overlay" id="modal-user-profile">
+        <div class="custom-modal-box" style="max-width: 520px !important;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-shield text-info me-2"></i>My Profile & Emergency Settings</h3>
+                <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <form id="form-user-profile" onsubmit="handleProfileUpdateSubmit(event)">
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-3 p-3 bg-secondary rounded mb-3">
+                        <div class="user-avatar" style="width: 50px; height: 50px; font-size: 1.3rem;">
+                            {{ session.get('full_name', 'U')[0] | upper }}
+                        </div>
+                        <div>
+                            <div class="fw-bold text-white fs-6" id="profile-display-name">{{ session.get('full_name', 'User') }}</div>
+                            <div class="text-muted small">@{{ session.get('username', 'user') }} &bull; <span class="badge badge-info">{{ session.get('role', 'citizen') }}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="profile-input-fullname">Full Name <span class="required">*</span></label>
+                        <input type="text" id="profile-input-fullname" class="form-control" value="{{ session.get('full_name', '') }}" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="profile-input-phone">Emergency Contact Phone</label>
+                        <input type="text" id="profile-input-phone" class="form-control" value="{{ session.get('phone', '') }}" placeholder="e.g. +91 9876543210">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="profile-input-locality">Primary Sector / Locality</label>
+                        <input type="text" id="profile-input-locality" class="form-control" value="{{ session.get('locality', 'Chennai') }}" placeholder="e.g. Chennai, Velachery">
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label for="profile-input-lat" class="small text-secondary">Default Latitude</label>
+                            <input type="number" step="any" id="profile-input-lat" class="form-control form-control-sm" value="{{ session.get('latitude', 13.0827) }}">
+                        </div>
+                        <div class="col-6">
+                            <label for="profile-input-lon" class="small text-secondary">Default Longitude</label>
+                            <input type="number" step="any" id="profile-input-lon" class="form-control form-control-sm" value="{{ session.get('longitude', 80.2707) }}">
+                        </div>
+                    </div>
+                    <small class="text-muted">Your default coordinates determine proximity to nearby relief centers and local weather alerts.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeProfileModal()">Cancel</button>
+                    <button type="submit" id="btn-save-profile" class="btn btn-primary">
+                        <span class="btn-text"><i class="fa-solid fa-floppy-disk me-1"></i> Save Changes</span>
                         <span class="spinner-sm d-none"></span>
                     </button>
                 </div>

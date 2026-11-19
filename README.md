@@ -16,13 +16,16 @@ The application adheres strictly to the curriculum of **CSA4310 – Internet Pro
 ## 2. The Three Core Academic Modules
 
 ### Module 1: Disaster Monitoring & Alert System
+- **Live USGS Earthquake Surveillance Feed:** Integrated real-time USGS GeoJSON API streaming worldwide and regional seismic activity with magnitude-scaled Leaflet markers, depths, timestamps, and direct USGS event links.
+- **Explainable Multi-Hazard Rule Engine:** Heuristic evaluation engine assessing weather metrics and earthquake telemetry into 4 explainable severity tiers (`Low`, `Medium`, `High`, `Critical`).
 - **External Meteorological Telemetry:** Integrated weather service proxy fetching real-time ambient conditions (temperature, precipitation rate, wind velocity, atmospheric pressure, and humidity).
-- **Rule-Based Danger Thresholds:** Configurable threshold engine comparing live parameters against hazard rules (e.g., rainfall rate $> 50\,\text{mm/h}$ or wind speed $> 90\,\text{km/h}$).
 - **Official Alert Broadcasting:** Administrative console to create, update, filter, and deactivate disaster warnings with classification (Low, Medium, High, Critical).
-- **Public Safety Protocols:** Contextual evacuation advisories and emergency directives for citizens.
+- **Public Safety Protocols:** Contextual evacuation advisories and emergency directives for citizens with conflict-free modal popups.
 - **Asynchronous Telemetry Polling:** Automated client-side polling utilizing `setInterval()` to retrieve fresh alerts without full-page reloads.
 
 ### Module 2: Emergency Reporting & Rescue Coordination
+- **Deterministic Incident Tracking Codes:** Automated `SG-2026-XXXX` tracking identifiers generated for every reported incident and SOS beacon.
+- **Smart Heuristic Dispatch Squad Recommendation:** Workload-aware, specialization-matching heuristic scoring algorithm (+30 specialization, proximity distance, active incident backlog penalties) with explainable reasoning bullets.
 - **Instant SOS Distress Beacon:** One-touch emergency trigger that acquires the client's live latitude and longitude via the browser's `navigator.geolocation` API and submits an urgent rescue ticket.
 - **Detailed Emergency Intake (FormData):** Comprehensive incident reporting supporting categories (Medical, Fire, Flood Rescue, Trapped Persons, Other) with optional photograph evidence upload handled via multipart `FormData`.
 - **Life-Cycle Status Workflow:** Strictly enforced 5-stage state pipeline:
@@ -31,20 +34,20 @@ The application adheres strictly to the curriculum of **CSA4310 – Internet Pro
 - **Two-Way Field Communication:** Real-time conversational message thread between citizens and first responders with 5-second asynchronous AJAX polling.
 - **Spatial Incident Mapping:** Interactive Leaflet.js / OpenStreetMap canvas plotting color-coded incident coordinates.
 
-### Module 3: Shelter Information & Disaster Reports
-- **Relief Camp Logistics:** Live tracking of safe haven capacities, occupancy rates, contact warden hotlines, and available amenities (drinking water, trauma care, backup generators, sanitation).
-- **Proximity Distance Calculation:** Server-side Haversine mathematical geodesic algorithm:
-  $$d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta\lambda}{2}\right)}\right)$$
-  Automatically sorting shelters nearest to the citizen's GPS coordinates.
-- **Turn-by-Turn Navigation:** One-click spatial routing links to Google Maps and OpenStreetMap.
-- **Resource Inventory Control:** Categorized relief stockpile management (Shelter supplies, Medical kits, Food/Water rations, Heavy rescue equipment) featuring automatic deficit warnings when stock drops below minimum thresholds.
-- **Analytical SITREPs & CSV Export:** Situation reporting tables and downloadable comma-separated values (CSV) reports for emergency requests, inventory ledgers, and alert histories.
+### Module 3: Shelter Information, Hospitals & Disaster Reports
+- **Dedicated Emergency Hospitals Directory:** Real-time bed availability tracking (*Total Beds*, *Available Beds*), trauma center classification, and direct navigation links.
+- **In-App Leaflet OSRM Route Navigation:** Turn-by-turn driving and walking vector polyline routing powered by the **Project OSRM Public API** with resilient mathematical geodesic fallback and official disaster safety advisories.
+- **Missing Persons Management System:** Dedicated public dossier search and case intake module generating **`MP-2026-XXXX`** identifiers, physical descriptions, last-seen map markers, photo attachments, and **Privacy-by-Design phone masking** (`98765****0`).
+- **Relief Camp Logistics:** Live tracking of safe haven capacities, occupancy rates, contact warden hotlines, and available amenities.
+- **Proximity Distance Calculation:** Server-side Haversine mathematical geodesic algorithm automatically sorting shelters and hospitals nearest to citizen GPS coordinates.
+- **Resource Inventory Allocation & Movement Audit Ledger:** Categorized relief stockpile management with safe stock allocation (preventing negative inventory) and immutable movement logging into `resource_movements`.
+- **Analytical Command Center & Visualizations:** 10 core operational KPI cards, multi-layer Leaflet operations map, and 4 interactive Chart.js visualizations (Severity distribution, Category breakdown, 7-day timeline trend, and Shelter occupancy meters).
 
 ---
 
 ## 3. Database Architecture (MySQL 8.0: `sentrygrid_db`)
 
-The database is normalized across **12 relational tables** with primary keys, foreign keys, cascading rules, and audit timestamps:
+The database is normalized across **15 relational tables** with primary keys, foreign keys, cascading rules, and audit timestamps:
 
 | # | Table Name | Purpose | Primary Key | Foreign Keys |
 |---|------------|---------|-------------|--------------|
@@ -60,6 +63,9 @@ The database is normalized across **12 relational tables** with primary keys, fo
 | 10 | `resources` | Relief inventory items, units, minimum safe thresholds | `id` | - |
 | 11 | `disaster_reports` | Formal SITREP incident reports, casualties, missing persons | `id` | `generated_by` $\rightarrow$ `users(id)` |
 | 12 | `notifications` | In-app user notifications and dispatch alerts | `id` | `user_id` $\rightarrow$ `users(id)` |
+| 13 | `hospitals` | Dedicated emergency medical centers, trauma level, total and available beds | `id` | - |
+| 14 | `missing_persons` | Missing person case dossiers, last-seen location, photo paths, privacy masking | `id` | `reported_by` $\rightarrow$ `users(id)`, `emergency_request_id` $\rightarrow$ `emergency_requests(id)` |
+| 15 | `resource_movements` | Immutable audit ledger tracking restocks, field allocations, destinations | `id` | `resource_id` $\rightarrow$ `resources(id)`, `performed_by` $\rightarrow$ `users(id)` |
 
 ---
 
@@ -69,9 +75,9 @@ Passwords are encrypted using Werkzeug's secure PBKDF2/scrypt password hashing a
 
 | Role | Username | Password | Intended Capabilities |
 |------|----------|----------|-----------------------|
-| **Administrator** | `admin` | `admin123` | Full system control, issue/deactivate alerts, verify incidents, assign rescue teams, close tickets, register shelters, manage resource inventory, export CSV reports. |
+| **Administrator** | `admin` | `admin123` | Full system control, issue/deactivate alerts, verify incidents, assign rescue teams with recommendation engine, close tickets, register shelters & hospitals, allocate resources, export CSV reports. |
 | **Emergency Responder** | `responder1` | `resp123` | View assigned & pending incidents, update status to *Rescued*, exchange field messages with victims, toggle team operational readiness. |
-| **Citizen** | `citizen1` | `citizen123` | Trigger instant GPS SOS beacon, submit detailed reports with photos, track personal request progress, find nearest shelters, receive area disaster alerts. |
+| **Citizen** | `citizen1` | `citizen123` | Trigger instant GPS SOS beacon, submit detailed reports with photos, track personal request progress, find nearest shelters and hospitals with turn-by-turn routing, report missing persons. |
 
 ---
 
@@ -87,46 +93,60 @@ All endpoints return uniform JSON payloads with standard HTTP status codes (`200
 }
 ```
 
-### Authentication & Sessions (`/api/auth`)
+### Authentication & Profiles (`/api/auth`)
 - `POST /api/register` – Register a citizen or responder account.
 - `POST /api/login` – Authenticate user and initialize secure session cookie.
 - `POST /api/logout` – Destroy session.
 - `GET /api/session` – Query active session profile details.
-- `PUT /api/profile` – Update telephone, locality, or GPS coordinates.
+- `GET /api/profile` – Fetch current user profile details and emergency settings.
+- `PUT /api/profile` – Update full name, telephone, locality, or default coordinates.
 - `GET /api/notifications` – Retrieve unread in-app dispatch notifications.
 - `PUT /api/notifications/<id>/read` – Mark notification as read.
 
-### Module 1: Alerts & Weather (`/api/alerts`)
+### Module 1: Alerts, Earthquakes & Weather (`/api/alerts`)
 - `GET /api/alerts` – List alerts (filters: `severity`, `type`, `locality`, `active`).
 - `GET /api/alerts/<id>` – Retrieve single alert details.
 - `POST /api/alerts` – *(Admin only)* Issue new disaster alert.
 - `PUT /api/alerts/<id>` – *(Admin only)* Modify alert description/severity.
 - `DELETE /api/alerts/<id>` – *(Admin only)* Deactivate / soft-delete alert.
+- `GET /api/earthquakes` – Live USGS GeoJSON seismic telemetry feed (5-min cache, magnitude/period filtering, Haversine distance, severity).
+- `GET /api/alerts/evaluate-risk` – Explainable multi-hazard composite risk calculation evaluating weather metrics and seismic events.
 - `GET /api/weather` – Proxy endpoint for live weather telemetry.
 - `GET /api/alerts/check-thresholds` – Fetch automated rule definitions.
 - `GET /api/alerts/stats` – Aggregate alert counts by severity & hazard category.
 
-### Module 2: Emergencies & Rescue (`/api/requests`)
-- `GET /api/requests` – Query incident board (role-restricted: citizen sees own, responder sees assigned, admin sees all).
+### Module 2: Emergencies, Rescue & Recommendation (`/api/requests`)
+- `GET /api/requests` – Query incident board (with `tracking_code` `SG-2026-XXXX`).
 - `GET /api/requests/<id>` – Detailed incident view with timeline history and assigned units.
 - `POST /api/requests` – File emergency report (supports JSON and `multipart/form-data` image upload).
-- `PUT /api/requests/<id>/status` – Advance state workflow (`Verified`, `Rescued`, `Closed`).
+- `PUT /api/requests/<id>/status` – Advance state workflow (`Verified`, `Dispatched`, `Rescued`, `Closed`).
+- `GET /api/requests/<id>/recommend-teams` – Smart heuristic dispatch squad recommendation engine (specialization match, proximity distance, active queue workload).
 - `POST /api/requests/<id>/assign` – *(Admin only)* Assign response team and auto-dispatch.
 - `GET /api/requests/<id>/messages` – Retrieve field message thread (supports `?after=timestamp` for polling).
 - `POST /api/requests/<id>/messages` – Post new message to incident channel.
 - `GET /api/requests/stats` – Metrics on SOS count, pending, and resolved incidents.
 
-### Module 3: Shelters, Resources & Reports (`/api/shelters`, `/api/resources`, `/api/reports`)
-- `GET /api/shelters` – Fetch shelters with optional `lat` and `lon` to calculate nearest distance.
+### Module 3: Shelters, Hospitals, Missing Persons, Resources & Reports
+- `GET /api/shelters` – Fetch shelters sorted by nearest distance.
 - `GET /api/shelters/<id>` – Single shelter profile and facilities list.
 - `POST /api/shelters` – *(Admin only)* Register new relief camp.
 - `PUT /api/shelters/<id>` – *(Admin only)* Update capacity and occupancy.
+- `GET /api/hospitals` – Fetch hospitals directory with bed availability meters and proximity.
+- `GET /api/hospitals/<id>` – Retrieve hospital emergency details.
+- `POST /api/hospitals` – *(Admin only)* Register new medical facility.
+- `PUT /api/hospitals/<id>` – *(Admin only)* Update hospital bed counts.
+- `GET /api/route` – In-app turn-by-turn polyline navigation via OSRM Public Routing API with geodesic fallback and safety advisory.
+- `GET /api/missing-persons` – Search missing persons dossiers with role-aware privacy phone masking (`98765****0`).
+- `POST /api/missing-persons` – File missing person case (generates `MP-2026-XXXX`, photo upload).
+- `GET /api/missing-persons/<id>` – View complete case dossier.
+- `PUT /api/missing-persons/<id>/status` – Lifecycle state updates (`Reported`, `Search Active`, `Located`, `Closed`).
+- `GET /api/missing-persons/stats` – Missing persons analytics.
 - `GET /api/resources` – List supply stockpile (filters: `category`, `low_stock=true`).
 - `POST /api/resources` – *(Admin only)* Add new resource item to ledger.
-- `PUT /api/resources/<id>` – *(Admin only)* Modify inventory threshold and location.
-- `PUT /api/resources/<id>/restock` – *(Admin only)* Replenish inventory quantity.
-- `DELETE /api/resources/<id>` – *(Admin only)* Delete item from ledger.
-- `GET /api/reports/summary` – Consolidated KPI metrics for operational dashboard.
+- `PUT /api/resources/<id>/restock` – *(Admin only)* Replenish inventory quantity and record audit movement.
+- `POST /api/resources/<id>/allocate` – *(Admin only)* Allocate supplies to field without negative stock.
+- `GET /api/resources/movements` – Immutable chronological audit ledger of stock movements.
+- `GET /api/reports/summary` – Consolidated 10 KPI metrics, timeline, and breakdown for operational dashboard.
 - `GET /api/reports/csv` – *(Admin only)* Download CSV export (`type=requests|resources|alerts`).
 
 ---

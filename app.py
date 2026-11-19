@@ -32,6 +32,7 @@ from routes.shelters import shelters_bp
 from routes.resources import resources_bp
 from routes.reports import reports_bp
 from routes.messages import messages_bp
+from routes.missing_persons import missing_persons_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(alerts_bp)
@@ -41,6 +42,7 @@ app.register_blueprint(shelters_bp)
 app.register_blueprint(resources_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(messages_bp)
+app.register_blueprint(missing_persons_bp)
 
 
 # ============================================================
@@ -113,6 +115,14 @@ def resources_page():
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
     return render_template('resources.html', user=session, config=Config)
+
+
+@app.route('/missing-persons')
+def missing_persons_page():
+    """Serve the missing persons directory and case tracking registry."""
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('missing_persons.html', user=session, config=Config)
 
 
 # ============================================================

@@ -51,6 +51,24 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
 
 
+def haversine(lat1, lon1, lat2, lon2):
+    """Calculate geodesic distance (km) between two coordinates using the Haversine trigonometric formula."""
+    import math
+    if None in (lat1, lon1, lat2, lon2):
+        return None
+    try:
+        lat1, lon1, lat2, lon2 = float(lat1), float(lon1), float(lat2), float(lon2)
+        R = 6371.0  # Earth's mean radius in km
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = (math.sin(dlat / 2) ** 2 +
+             math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return round(R * c, 2)
+    except Exception:
+        return None
+
+
 # ============================================================
 # Database Engine Manager (MySQL with Cloud Fallback)
 # ============================================================
@@ -232,6 +250,31 @@ def _init_cloud_schema():
         created_at TEXT DEFAULT (datetime('now'))
     );''')
 
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS hospitals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, address TEXT NOT NULL,
+        latitude REAL NOT NULL, longitude REAL NOT NULL, contact_phone TEXT,
+        emergency_department INTEGER DEFAULT 1, total_beds INTEGER DEFAULT 0, available_beds INTEGER DEFAULT 0,
+        trauma_level TEXT DEFAULT 'Level 1 Trauma Center', services TEXT, is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+    );''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS missing_persons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, case_number TEXT UNIQUE NOT NULL, full_name TEXT NOT NULL,
+        age INTEGER, gender TEXT, photo_path TEXT, last_seen_date TEXT, last_seen_location TEXT NOT NULL,
+        latitude REAL, longitude REAL, description TEXT, emergency_request_id INTEGER,
+        contact_name TEXT, contact_phone TEXT, status TEXT DEFAULT 'Reported', reported_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+    );''')
+
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS resource_movements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, resource_id INTEGER NOT NULL, movement_type TEXT NOT NULL,
+        quantity INTEGER NOT NULL, destination_type TEXT, destination_id INTEGER, notes TEXT,
+        performed_by INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now'))
+    );''')
+
     # Seed users if empty
     c.execute("SELECT COUNT(*) FROM users")
     if c.fetchone()[0] == 0:
@@ -301,6 +344,26 @@ def _init_cloud_schema():
         c.execute("""
             INSERT INTO resources (name, category, quantity, unit, min_threshold, location)
             VALUES ('Emergency Trauma Bandages & Dressing', 'medical', 15, 'kits', 50, 'Medical Reserve Depot')
+        """)
+
+        # Sample hospitals
+        c.execute("""
+            INSERT INTO hospitals (id, name, address, latitude, longitude, contact_phone, emergency_department, total_beds, available_beds, trauma_level, services)
+            VALUES (1, 'Rajiv Gandhi Government General Hospital (RGGGH)', 'EVR Periyar Salai, Park Town, Chennai', 13.0805, 80.2785, '044-25305000', 1, 850, 142, 'Level 1 Trauma Center', '24/7 ER, Cardiac ICU, Burn Care, Trauma Surgery, Blood Bank')
+        """)
+        c.execute("""
+            INSERT INTO hospitals (id, name, address, latitude, longitude, contact_phone, emergency_department, total_beds, available_beds, trauma_level, services)
+            VALUES (2, 'Apollo Speciality Hospital – Greams Road', '21 Greams Lane, Thousand Lights, Chennai', 13.0569, 80.2503, '044-28290200', 1, 560, 48, 'Level 1 Trauma Center', 'Emergency ICU, Neurosurgery, Organ Transplant, Hyperbaric Oxygen')
+        """)
+
+        # Sample missing persons
+        c.execute("""
+            INSERT INTO missing_persons (case_number, full_name, age, gender, last_seen_date, last_seen_location, latitude, longitude, description, contact_name, contact_phone, status, reported_by)
+            VALUES ('MP-2026-0001', 'Anandhi Selvam', 68, 'Female', '2026-11-01 16:30:00', 'Near Velachery Bus Terminus, Chennai', 12.975669, 80.218209, 'Wearing green cotton saree, silver spectacles. Hard of hearing and requires diabetic medication.', 'Karthik Selvam (Son)', '9876500111', 'Search Active', 1)
+        """)
+        c.execute("""
+            INSERT INTO missing_persons (case_number, full_name, age, gender, last_seen_date, last_seen_location, latitude, longitude, description, contact_name, contact_phone, status, reported_by)
+            VALUES ('MP-2026-0002', 'Rohan Verma', 11, 'Male', '2026-11-01 17:15:00', 'Anna Nagar Tower Park entrance, Chennai', 13.085000, 80.210000, 'Blue t-shirt, grey shorts. Separated from family during sudden cloudburst.', 'Meera Verma (Mother)', '9876500222', 'Reported', 3)
         """)
 
     conn.commit()

@@ -124,7 +124,7 @@
 
 <!-- ================= Modal: File Detailed Emergency Report ================= -->
 <div class="modal-overlay" id="modal-new-emergency">
-    <div class="modal custom-modal-box">
+    <div class="custom-modal-box">
         <div class="modal-header">
             <h3><i class="fa-solid fa-file-medical text-danger me-2"></i>File Emergency Request</h3>
             <button class="modal-close" onclick="closeNewRequestModal()">&times;</button>
@@ -212,7 +212,7 @@
 
 <!-- ================= Modal: Status Workflow & Rescue Management ================= -->
 <div class="modal-overlay" id="modal-request-detail">
-    <div class="modal custom-modal-box" style="max-width: 800px !important;">
+    <div class="custom-modal-box" style="max-width: 800px !important;">
         <div class="modal-header">
             <h3><i class="fa-solid fa-clipboard-check text-success me-2"></i>Incident Response Console <span id="detail-modal-id">#--</span></h3>
             <button class="modal-close" onclick="closeRequestDetailModal()">&times;</button>
@@ -304,23 +304,35 @@
 
 <!-- ================= Modal: Assign Response Team (Admin Only) ================= -->
 <div class="modal-overlay" id="modal-assign-team">
-    <div class="modal custom-modal-box">
+    <div class="custom-modal-box">
         <div class="modal-header">
             <h3><i class="fa-solid fa-people-arrows text-purple me-2"></i>Assign Rescue Response Unit</h3>
             <button class="modal-close" onclick="closeAssignTeamModal()">&times;</button>
         </div>
         <form id="form-assign-team" onsubmit="handleAssignTeamSubmit(event)">
             <div class="modal-body">
-                <p class="small text-muted mb-3">Deploying a team will automatically advance this request status to <strong>Dispatched</strong>.</p>
-                <div class="form-group">
-                    <label for="assign-team-select">Select Available Response Team <span class="required">*</span></label>
+                <p class="small text-muted mb-2">Deploying a unit advances request status to <strong>Dispatched</strong> and alerts field responders.</p>
+
+                <!-- Intelligent Dispatch Recommendation Widget -->
+                <div class="mb-3 p-3 rounded" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.35);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small fw-bold text-info"><i class="fa-solid fa-microchip me-1"></i> Smart Squad Recommendation Engine</span>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;" id="recommendation-target-incident">Evaluating...</span>
+                    </div>
+                    <div id="recommended-teams-container">
+                        <small class="text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i> Analyzing squad proximity, category match & queue workload...</small>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="assign-team-select">Chosen Response Unit <span class="required">*</span></label>
                     <select id="assign-team-select" class="form-control" required>
-                        <option value="">Loading available teams...</option>
+                        <option value="">Loading available squads...</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group mb-2">
                     <label for="assign-notes">Deployment Mission Notes</label>
-                    <textarea id="assign-notes" class="form-control" placeholder="Specific dispatch orders, route cautions, specialized gear needed..."></textarea>
+                    <textarea id="assign-notes" class="form-control" rows="2" placeholder="Specific dispatch orders, transit cautions, specialized equipment..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">

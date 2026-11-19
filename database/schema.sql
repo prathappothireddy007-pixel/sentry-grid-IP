@@ -256,6 +256,72 @@ CREATE TABLE notifications (
 );
 
 -- ============================================================
+-- TABLE 13: hospitals
+-- Dedicated medical & trauma center directory with bed availability
+-- ============================================================
+CREATE TABLE IF NOT EXISTS hospitals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    address VARCHAR(500) NOT NULL,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    contact_phone VARCHAR(30),
+    emergency_department BOOLEAN DEFAULT TRUE,
+    total_beds INT DEFAULT 0,
+    available_beds INT DEFAULT 0,
+    trauma_level VARCHAR(50) DEFAULT 'Level 1 Trauma Center',
+    services TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- TABLE 14: missing_persons
+-- Missing person case files with tracking and privacy controls
+-- ============================================================
+CREATE TABLE IF NOT EXISTS missing_persons (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    case_number VARCHAR(50) UNIQUE NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    age INT,
+    gender VARCHAR(20),
+    photo_path VARCHAR(500),
+    last_seen_date DATETIME,
+    last_seen_location VARCHAR(255) NOT NULL,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    description TEXT,
+    emergency_request_id INT NULL,
+    contact_name VARCHAR(100),
+    contact_phone VARCHAR(30),
+    status ENUM('Reported', 'Under Review', 'Search Active', 'Located', 'Closed', 'Invalid/Duplicate') DEFAULT 'Reported',
+    reported_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (reported_by) REFERENCES users(id),
+    FOREIGN KEY (emergency_request_id) REFERENCES emergency_requests(id) ON DELETE SET NULL
+);
+
+-- ============================================================
+-- TABLE 15: resource_movements
+-- Audit ledger of relief stockpile restocks & disaster allocations
+-- ============================================================
+CREATE TABLE IF NOT EXISTS resource_movements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    resource_id INT NOT NULL,
+    movement_type ENUM('restock', 'allocated', 'dispatched', 'adjusted') NOT NULL,
+    quantity INT NOT NULL,
+    destination_type VARCHAR(50),
+    destination_id INT NULL,
+    notes TEXT,
+    performed_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (performed_by) REFERENCES users(id)
+);
+
+-- ============================================================
 -- INDEXES for faster queries on frequently searched columns
 -- ============================================================
 
@@ -271,3 +337,7 @@ CREATE INDEX idx_requests_status ON emergency_requests(status);
 CREATE INDEX idx_requests_user ON emergency_requests(user_id);
 -- Speed up fetching unread notifications for a user
 CREATE INDEX idx_notifications_user_read ON notifications(user_id, is_read);
+-- Speed up missing person status and case searches
+CREATE INDEX idx_missing_status ON missing_persons(status);
+-- Speed up hospital searches by active status
+CREATE INDEX idx_hospitals_active ON hospitals(is_active);

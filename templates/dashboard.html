@@ -19,45 +19,99 @@
 </div>
 {% endif %}
 
-<!-- Key Metrics Stat Cards -->
-<div class="stat-cards" id="dashboard-stat-cards">
-    <div class="stat-card">
-        <div class="stat-icon red">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+<!-- Key Metrics Stat Cards (10 Core Operational KPIs) -->
+<div class="row g-3 mb-3" id="dashboard-stat-cards">
+    <!-- Row 1: Primary Emergency & Response KPIs -->
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="stat-info">
+                <h4 id="stat-active-alerts">--</h4>
+                <p>Active Disaster Alerts</p>
+            </div>
         </div>
-        <div class="stat-info">
-            <h4 id="stat-active-alerts">--</h4>
-            <p>Active Disaster Alerts</p>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="fa-solid fa-truck-medical"></i></div>
+            <div class="stat-info">
+                <h4 id="stat-pending-requests">--</h4>
+                <p>Pending Emergencies</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-life-ring"></i></div>
+            <div class="stat-info">
+                <h4 id="stat-resolved-incidents">--</h4>
+                <p>Rescued / Resolved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fa-solid fa-people-group"></i></div>
+            <div class="stat-info">
+                <h4 id="stat-available-teams">--</h4>
+                <p>Available Teams</p>
+            </div>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon orange">
-            <i class="fa-solid fa-truck-medical"></i>
-        </div>
-        <div class="stat-info">
-            <h4 id="stat-pending-requests">--</h4>
-            <p>Pending Emergencies</p>
-        </div>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-icon green">
-            <i class="fa-solid fa-life-ring"></i>
-        </div>
-        <div class="stat-info">
-            <h4 id="stat-resolved-incidents">--</h4>
-            <p>Rescued / Resolved</p>
+    <!-- Row 2: Facilities, Missing Persons & Resource Logistics KPIs -->
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon green" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-house-chimney-medical"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-active-shelters">--</h5>
+                <p class="m-0 small text-muted">Relief Shelters</p>
+            </div>
         </div>
     </div>
-
-    <div class="stat-card">
-        <div class="stat-icon blue">
-            <i class="fa-solid fa-people-group"></i>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon red" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-hospital"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-hospital-beds">--</h5>
+                <p class="m-0 small text-muted">Available Beds</p>
+            </div>
         </div>
-        <div class="stat-info">
-            <h4 id="stat-available-teams">--</h4>
-            <p>Available Teams</p>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon orange" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-person-circle-question"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-mp-active">--</h5>
+                <p class="m-0 small text-muted">Missing Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon green" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-person-circle-check"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-mp-found">--</h5>
+                <p class="m-0 small text-muted">Persons Found</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon blue" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-relief-items">--</h5>
+                <p class="m-0 small text-muted">Supply Items</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="stat-card p-3">
+            <div class="stat-icon red" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-dolly"></i></div>
+            <div class="stat-info">
+                <h5 class="m-0 fs-5 text-white fw-bold" id="stat-low-stock">--</h5>
+                <p class="m-0 small text-muted">Low Stock Deficit</p>
+            </div>
         </div>
     </div>
 </div>
@@ -90,31 +144,31 @@
                 </div>
             </div>
 
-            <div class="weather-widget">
-                <div class="weather-main">
-                    <div class="weather-temp" id="weather-temp">--°C</div>
+            <div class="weather-widget" style="background: linear-gradient(135deg, rgba(22, 33, 62, 0.95), rgba(15, 52, 96, 0.85)) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: var(--radius); padding: 22px;">
+                <div class="weather-main d-flex align-items-center gap-3 mb-3">
+                    <div class="weather-temp fw-bold" id="weather-temp" style="color: #38bdf8 !important; font-size: 3.2rem; line-height: 1; font-weight: 800; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);">--°C</div>
                     <div>
-                        <h4 class="m-0" id="weather-city">Chennai</h4>
-                        <div class="weather-desc" id="weather-description">Fetching data...</div>
+                        <h4 class="m-0 text-white fw-bold" id="weather-city" style="color: #ffffff !important; font-size: 1.5rem; letter-spacing: 0.3px;">Chennai</h4>
+                        <div class="weather-desc" id="weather-description" style="color: #cbd5e1 !important; font-size: 0.95rem; text-transform: capitalize;">Fetching data...</div>
                     </div>
                 </div>
 
-                <div class="weather-details">
-                    <div class="weather-detail">
-                        <div class="value" id="weather-humidity">--%</div>
-                        <div class="label">Humidity</div>
+                <div class="weather-details" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px;">
+                    <div class="weather-detail" style="text-align: center; padding: 12px 10px; background: rgba(10, 15, 30, 0.85) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 8px;">
+                        <div class="value fw-bold text-white" id="weather-humidity" style="color: #ffffff !important; font-size: 1.35rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: block; margin-bottom: 3px;">--%</div>
+                        <div class="label" style="color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Humidity</div>
                     </div>
-                    <div class="weather-detail">
-                        <div class="value" id="weather-wind">-- km/h</div>
-                        <div class="label">Wind Speed</div>
+                    <div class="weather-detail" style="text-align: center; padding: 12px 10px; background: rgba(10, 15, 30, 0.85) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 8px;">
+                        <div class="value fw-bold text-white" id="weather-wind" style="color: #ffffff !important; font-size: 1.35rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: block; margin-bottom: 3px;">-- km/h</div>
+                        <div class="label" style="color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Wind Speed</div>
                     </div>
-                    <div class="weather-detail">
-                        <div class="value" id="weather-rain">-- mm</div>
-                        <div class="label">Precipitation</div>
+                    <div class="weather-detail" style="text-align: center; padding: 12px 10px; background: rgba(10, 15, 30, 0.85) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 8px;">
+                        <div class="value fw-bold text-white" id="weather-rain" style="color: #ffffff !important; font-size: 1.35rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: block; margin-bottom: 3px;">-- mm</div>
+                        <div class="label" style="color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Precipitation</div>
                     </div>
-                    <div class="weather-detail">
-                        <div class="value" id="weather-pressure">-- hPa</div>
-                        <div class="label">Pressure</div>
+                    <div class="weather-detail" style="text-align: center; padding: 12px 10px; background: rgba(10, 15, 30, 0.85) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 8px;">
+                        <div class="value fw-bold text-white" id="weather-pressure" style="color: #ffffff !important; font-size: 1.35rem; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.8); display: block; margin-bottom: 3px;">-- hPa</div>
+                        <div class="label" style="color: #94a3b8 !important; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Pressure</div>
                     </div>
                 </div>
             </div>
@@ -127,7 +181,7 @@
         </div>
     </div>
 
-    <!-- Analytics Chart: Alerts by Severity -->
+    <!-- Analytics Chart 1: Alerts by Severity -->
     <div class="card">
         <div class="card-header">
             <h3><i class="fa-solid fa-chart-pie text-warning me-2"></i>Disaster Alerts by Severity</h3>
@@ -135,6 +189,84 @@
         <div class="card-body">
             <div style="position: relative; height: 260px; width: 100%;">
                 <canvas id="chart-alerts-severity"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Layer Live Geographic Operational Command Map -->
+<div class="card mt-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h3 class="m-0"><i class="fa-solid fa-map-location-dot text-info me-2"></i>Live Multi-Hazard & Response Operational Map</h3>
+            <small class="text-muted">Interactive unified geospatial view of incidents, official alert zones, relief shelters, hospitals & earthquakes</small>
+        </div>
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+            <label class="small text-light cursor-pointer mb-0">
+                <input type="checkbox" id="layer-incidents" checked onchange="toggleMapLayer('incidents')"> <i class="fa-solid fa-truck-medical text-danger"></i> Incidents
+            </label>
+            <label class="small text-light cursor-pointer mb-0">
+                <input type="checkbox" id="layer-alerts" checked onchange="toggleMapLayer('alerts')"> <i class="fa-solid fa-triangle-exclamation text-warning"></i> Alerts
+            </label>
+            <label class="small text-light cursor-pointer mb-0">
+                <input type="checkbox" id="layer-shelters" checked onchange="toggleMapLayer('shelters')"> <i class="fa-solid fa-house-chimney-medical text-success"></i> Shelters
+            </label>
+            <label class="small text-light cursor-pointer mb-0">
+                <input type="checkbox" id="layer-hospitals" checked onchange="toggleMapLayer('hospitals')"> <i class="fa-solid fa-hospital text-danger"></i> Hospitals
+            </label>
+            <label class="small text-light cursor-pointer mb-0">
+                <input type="checkbox" id="layer-earthquakes" checked onchange="toggleMapLayer('earthquakes')"> <i class="fa-solid fa-volcano text-info"></i> Earthquakes
+            </label>
+            <button class="btn btn-sm btn-outline-info py-0 px-2" onclick="refreshDashboardMap()">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="dashboard-ops-map" style="height: 420px; width: 100%;"></div>
+    </div>
+</div>
+
+<!-- Advanced Visual Analytics Grid (3 Additional Interactive Charts) -->
+<div class="row g-3 mt-1">
+    <!-- Chart 2: Incidents by Category -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-pie text-danger me-2"></i>Incidents by Hazard</h3>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="chart-requests-by-type"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: 7-Day Timeline Trend -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line text-info me-2"></i>7-Day Incident Trend</h3>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="chart-incident-timeline"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Shelter Capacity vs Occupancy -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-column text-success me-2"></i>Shelter Occupancy</h3>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="chart-shelter-occupancy"></canvas>
+                </div>
             </div>
         </div>
     </div>

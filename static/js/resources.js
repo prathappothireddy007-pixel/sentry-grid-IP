@@ -7,9 +7,11 @@
  */
 
 let activeRestockResourceId = null;
+let activeAllocateResourceId = null;
 
 $(document).ready(function() {
     loadResources();
+    loadResourceMovements();
 });
 
 // Load Resources from Flask REST API
@@ -106,6 +108,9 @@ function renderResourcesTable(items) {
                 <td>
                     <button class="btn btn-sm btn-outline text-success py-0 px-2" onclick="openRestockModal(${r.id}, '${escapeHtml(r.name)}')">
                         <i class="fa-solid fa-dolly me-1"></i> Restock
+                    </button>
+                    <button class="btn btn-sm btn-outline text-warning py-0 px-2 ms-1" onclick="openAllocateModal(${r.id}, '${escapeHtml(r.name)}', ${r.quantity}, '${escapeHtml(r.unit)}')">
+                        <i class="fa-solid fa-truck-ramp-box me-1"></i> Allocate
                     </button>
                     <button class="btn btn-sm btn-outline text-danger py-0 px-2 ms-1" onclick="deleteResource(${r.id})" title="Delete Item">
                         <i class="fa-solid fa-trash-can"></i>
@@ -220,6 +225,7 @@ function handleRestockSubmit(e) {
                 showToast('success', response.message, 'Restocked');
                 closeRestockModal();
                 loadResources();
+                loadResourceMovements();
             }
         },
         error: function(xhr) {
@@ -229,6 +235,114 @@ function handleRestockSubmit(e) {
 
             const err = (xhr.responseJSON && xhr.responseJSON.message) || 'Restock failed.';
             showToast('error', err);
+        }
+    });
+}
+
+// Modal Handlers: Allocate Resource
+function openAllocateModal(resourceId, resourceName, availQty, unit) {
+    activeAllocateResourceId = resourceId;
+    $('#allocate-resource-id').val(resourceId);
+    $('#allocate-resource-name').text(resourceName);
+    $('#allocate-resource-avail').text(`${availQty} ${unit}`);
+    $('#allocate-quantity').val('').attr('max', availQty);
+    $('#allocate-notes').val('');
+    $('#modal-allocate-resource').addClass('active');
+}
+
+function closeAllocateModal() {
+    $('#modal-allocate-resource').removeClass('active');
+    activeAllocateResourceId = null;
+}
+
+function handleAllocateSubmit(e) {
+    e.preventDefault();
+    const qty = $('#allocate-quantity').val();
+    const destType = $('#allocate-destination-type').val();
+    const notes = $('#allocate-notes').val().trim();
+
+    if (!qty || parseInt(qty) <= 0) {
+        showToast('error', 'Enter a valid positive allocation quantity.');
+        return;
+    }
+
+    const btn = $('#btn-submit-allocate');
+    btn.prop('disabled', true);
+    btn.find('.btn-text').addClass('d-none');
+    btn.find('.spinner-sm').removeClass('d-none');
+
+    $.ajax({
+        url: `/api/resources/${activeAllocateResourceId}/allocate`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            quantity: parseInt(qty),
+            destination_type: destType,
+            notes: notes
+        }),
+        dataType: 'json',
+        success: function(response) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            if (response.success) {
+                showToast('success', response.message, 'Dispatched to Field');
+                closeAllocateModal();
+                loadResources();
+                loadResourceMovements();
+            }
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            const err = (xhr.responseJSON && xhr.responseJSON.message) || 'Allocation failed.';
+            showToast('error', err);
+        }
+    });
+}
+
+// Load Immutable Resource Movement Ledger
+function loadResourceMovements() {
+    $.ajax({
+        url: '/api/resources/movements',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            const tbody = document.getElementById('movements-table-body');
+            if (!tbody) return;
+
+            if (!response.success || !response.data || response.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No movement records logged yet.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            response.data.forEach(m => {
+                const isRestock = m.movement_type === 'restock';
+                const typeBadge = isRestock ?
+                    '<span class="badge badge-safe"><i class="fa-solid fa-arrow-down me-1"></i>Restock</span>' :
+                    '<span class="badge badge-high"><i class="fa-solid fa-truck-fast me-1"></i>Allocated</span>';
+
+                html += `
+                    <tr>
+                        <td class="small text-muted">${escapeHtml(m.created_at || 'Recent')}</td>
+                        <td><strong>${escapeHtml(m.resource_name)}</strong></td>
+                        <td>${typeBadge}</td>
+                        <td><strong class="${isRestock ? 'text-success' : 'text-warning'}">${isRestock ? '+' : '-'}${m.quantity}</strong> <small class="text-muted">${escapeHtml(m.unit || '')}</small></td>
+                        <td><span class="badge badge-purple">${escapeHtml((m.destination_type || 'facility').replace('_', ' ').toUpperCase())}</span></td>
+                        <td><small>${escapeHtml(m.performed_by_name || 'Admin')} <span class="badge badge-medium">${escapeHtml(m.performed_by_role || '')}</span></small></td>
+                        <td class="small text-muted">${escapeHtml(m.notes || '—')}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        },
+        error: function() {
+            const tbody = document.getElementById('movements-table-body');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-danger">Failed to load movement ledger.</td></tr>';
         }
     });
 }

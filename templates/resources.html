@@ -62,7 +62,7 @@
 </div>
 
 <!-- Resource Inventory Table -->
-<div class="card">
+<div class="card mb-4">
     <div class="card-header">
         <h3><i class="fa-solid fa-dolly text-warning me-2"></i>Resource Inventory Ledger</h3>
         <span class="text-muted small" id="res-count-label">-- items</span>
@@ -92,9 +92,44 @@
     </div>
 </div>
 
+<!-- Stock Movement & Allocation Audit Trail Ledger -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="m-0"><i class="fa-solid fa-clock-rotate-left text-info me-2"></i>Stock Movement & Dispatch Audit Ledger</h3>
+            <div class="text-muted small">Immutable verification log of restocks, field allocations, and supply transfers</div>
+        </div>
+        <button class="btn btn-sm btn-outline-info" onclick="loadResourceMovements()">
+            <i class="fa-solid fa-rotate-right me-1"></i> Refresh Ledger
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Resource Item</th>
+                        <th>Movement Type</th>
+                        <th>Quantity Moved</th>
+                        <th>Destination</th>
+                        <th>Performed By</th>
+                        <th>Operational Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="movements-table-body">
+                    <tr>
+                        <td colspan="7" class="text-center py-3 text-muted">Loading movement ledger...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- ================= Modal: Add New Resource Stock ================= -->
 <div class="modal-overlay" id="modal-create-resource">
-    <div class="modal custom-modal-box">
+    <div class="custom-modal-box">
         <div class="modal-header">
             <h3><i class="fa-solid fa-box-open text-purple me-2"></i>Add Resource to Inventory</h3>
             <button class="modal-close" onclick="closeCreateResourceModal()">&times;</button>
@@ -154,7 +189,7 @@
 
 <!-- ================= Modal: Restock Inventory ================= -->
 <div class="modal-overlay" id="modal-restock-resource">
-    <div class="modal custom-modal-box" style="max-width: 450px !important;">
+    <div class="custom-modal-box" style="max-width: 450px !important;">
         <div class="modal-header">
             <h3><i class="fa-solid fa-arrow-up-right-dots text-success me-2"></i>Replenish Inventory</h3>
             <button class="modal-close" onclick="closeRestockModal()">&times;</button>
@@ -172,6 +207,53 @@
                 <button type="button" class="btn btn-outline" onclick="closeRestockModal()">Cancel</button>
                 <button type="submit" id="btn-submit-restock" class="btn btn-success">
                     <span class="btn-text"><i class="fa-solid fa-check me-1"></i> Confirm Restock</span>
+                    <span class="spinner-sm d-none"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= Modal: Allocate Resource to Facility ================= -->
+<div class="modal-overlay" id="modal-allocate-resource">
+    <div class="custom-modal-box" style="max-width: 480px !important;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-truck-ramp-box text-warning me-2"></i>Allocate Resource to Field</h3>
+            <button class="modal-close" onclick="closeAllocateModal()">&times;</button>
+        </div>
+        <form id="form-allocate-resource" onsubmit="handleAllocateSubmit(event)">
+            <input type="hidden" id="allocate-resource-id">
+            <div class="modal-body">
+                <div class="p-3 bg-secondary rounded mb-3">
+                    <div class="small text-muted">Selected Supply Item</div>
+                    <div class="fw-bold text-white fs-6" id="allocate-resource-name">--</div>
+                    <div class="small text-info mt-1">Available In Depot: <strong id="allocate-resource-avail">--</strong></div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="allocate-quantity">Quantity to Dispatch <span class="required">*</span></label>
+                    <input type="number" id="allocate-quantity" class="form-control" min="1" placeholder="Enter amount to dispatch" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="allocate-destination-type">Target Facility / Destination Type <span class="required">*</span></label>
+                    <select id="allocate-destination-type" class="form-control" required>
+                        <option value="shelter">Relief Shelter</option>
+                        <option value="hospital">Emergency Hospital / Medical Center</option>
+                        <option value="field_squad">Field Rescue Squad</option>
+                        <option value="transit_depot">Sub-District Depot</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-2">
+                    <label for="allocate-notes">Mission Notes & Authorization</label>
+                    <textarea id="allocate-notes" class="form-control" rows="2" placeholder="e.g. Dispatched for flood-affected families in Sector 4."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeAllocateModal()">Cancel</button>
+                <button type="submit" id="btn-submit-allocate" class="btn btn-warning text-dark font-weight-bold">
+                    <span class="btn-text"><i class="fa-solid fa-paper-plane me-1"></i> Confirm Dispatch</span>
                     <span class="spinner-sm d-none"></span>
                 </button>
             </div>

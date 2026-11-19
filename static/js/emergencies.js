@@ -424,29 +424,98 @@ function advanceStatus(newStatus) {
     });
 }
 
-// Team Assignment Modal
+// Team Assignment Modal with Heuristic Recommendation Engine
 function openAssignTeamModal() {
     $('#modal-assign-team').addClass('active');
+    const container = $('#recommended-teams-container');
+    const select = $('#assign-team-select');
+    container.html('<div class="text-center py-2 text-muted small"><i class="fa-solid fa-spinner fa-spin me-1"></i> Running multi-factor dispatch heuristics...</div>');
+    select.html('<option value="">Loading ranked units...</option>');
 
-    // Load available teams via AJAX
+    if (!activeIncidentId) {
+        container.html('<div class="text-danger small">No incident currently active.</div>');
+        return;
+    }
+
+    $.ajax({
+        url: `/api/requests/${activeIncidentId}/recommend-teams`,
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success && response.data && response.data.length > 0) {
+                const teams = response.data;
+                const inc = response.incident || {};
+                $('#recommendation-target-incident').text(`${inc.tracking_code || '#' + activeIncidentId} &bull; ${escapeHtml(inc.emergency_type || '')}`);
+
+                select.empty();
+                select.append('<option value="">-- Choose Assigned Unit --</option>');
+
+                let recHtml = '<div class="d-flex flex-column gap-2">';
+                // Display top 2-3 recommendations
+                teams.slice(0, 3).forEach((t, idx) => {
+                    const isTop = idx === 0;
+                    const scoreColor = t.recommendation_score >= 80 ? '#10b981' : (t.recommendation_score >= 60 ? '#38bdf8' : '#f59e0b');
+                    recHtml += `
+                        <div class="p-2 rounded d-flex justify-content-between align-items-center" style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${isTop ? '#10b981' : 'rgba(255,255,255,0.08)'};">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge fw-bold" style="background: ${scoreColor}22; color: ${scoreColor}; border: 1px solid ${scoreColor}; font-size: 0.75rem;">
+                                        ${t.recommendation_score}% Match
+                                    </span>
+                                    <strong class="text-light" style="font-size: 0.9rem;">${escapeHtml(t.team_name)}</strong>
+                                    <span class="badge badge-info" style="font-size: 0.65rem;">${escapeHtml(t.category)}</span>
+                                </div>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-route me-1 text-warning"></i>${t.distance_km} km away &bull;
+                                    <i class="fa-solid fa-list-check me-1 ms-1 text-info"></i>${t.active_tickets} active tickets &bull;
+                                    <span>${escapeHtml(t.reasons[0] || 'Available')}</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm ${isTop ? 'btn-success' : 'btn-outline-info'} py-1 px-2 text-nowrap" style="font-size: 0.75rem;" onclick="selectRecommendedUnit(${t.team_id})">
+                                <i class="fa-solid fa-check me-1"></i> ${isTop ? 'Best Fit' : 'Choose'}
+                            </button>
+                        </div>
+                    `;
+                });
+                recHtml += '</div>';
+                container.html(recHtml);
+
+                teams.forEach((t, idx) => {
+                    const isTop = idx === 0;
+                    select.append(`<option value="${t.team_id}" ${isTop ? 'selected' : ''}>[${t.recommendation_score}% Match] ${escapeHtml(t.team_name)} (${escapeHtml(t.category.toUpperCase())}) – ${t.distance_km}km</option>`);
+                });
+            } else {
+                fallbackLoadTeams();
+            }
+        },
+        error: function() {
+            fallbackLoadTeams();
+        }
+    });
+}
+
+function selectRecommendedUnit(teamId) {
+    $('#assign-team-select').val(teamId);
+    $('#assign-notes').focus();
+    showToast('info', 'Squad selected from recommendation engine.');
+}
+
+function fallbackLoadTeams() {
+    $('#recommended-teams-container').html('<small class="text-muted">Direct recommendation unavailable. Showing available squads below.</small>');
     $.ajax({
         url: '/api/teams?status=available',
         type: 'GET',
         dataType: 'json',
         success: function(response) {
-            if (response.success) {
-                const select = $('#assign-team-select');
-                select.empty();
-
-                if (!response.data || response.data.length === 0) {
-                    select.append('<option value="">No teams currently available</option>');
-                    return;
-                }
-
+            const select = $('#assign-team-select');
+            select.empty();
+            if (response.success && response.data && response.data.length > 0) {
                 select.append('<option value="">-- Choose Unit --</option>');
                 response.data.forEach(t => {
                     select.append(`<option value="${t.id}">${escapeHtml(t.team_name)} (${escapeHtml(t.team_category.toUpperCase())})</option>`);
                 });
+            } else {
+                select.append('<option value="">No squads currently available</option>');
             }
         }
     });

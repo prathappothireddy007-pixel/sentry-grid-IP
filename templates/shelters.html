@@ -8,51 +8,111 @@
 <div class="card mb-3" style="background: linear-gradient(135deg, rgba(39,174,96,0.1), rgba(22,33,62,0.9));">
     <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <div>
-            <h4 class="m-0 text-success"><i class="fa-solid fa-house-chimney-medical me-2"></i>Shelter Logistics & Reporting</h4>
-            <small class="text-muted">Demonstrates Geolocation distance sorting, Leaflet interactive shelter mapping, and analytical CSV reports.</small>
+            <h4 class="m-0 text-success"><i class="fa-solid fa-house-chimney-medical me-2"></i>Shelter Logistics & Hospital Directory</h4>
+            <small class="text-muted">Safe havens, emergency trauma hospitals, in-app evacuation polyline routing, and situational reports.</small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             {% if session.get('role') == 'admin' %}
             <button class="btn btn-success btn-sm" onclick="openCreateShelterModal()">
                 <i class="fa-solid fa-plus me-1"></i> Register Shelter
             </button>
+            <button class="btn btn-primary btn-sm" onclick="openCreateHospitalModal()">
+                <i class="fa-solid fa-hospital-user me-1"></i> Register Hospital
+            </button>
             {% endif %}
             <button class="btn btn-outline btn-sm" onclick="locateUserAndSortShelters()">
-                <i class="fa-solid fa-location-arrow me-1"></i> Find Nearest to Me
+                <i class="fa-solid fa-location-arrow me-1"></i> Sort by My GPS
             </button>
-            <button class="btn btn-outline btn-sm" onclick="loadShelters()">
+            <button class="btn btn-outline btn-sm" onclick="refreshSheltersAndHospitals()">
                 <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
             </button>
         </div>
     </div>
 </div>
 
-<!-- Leaflet Interactive Shelters Map -->
+<!-- Nav Tabs: Shelters vs Hospitals -->
+<ul class="nav nav-pills mb-3 gap-2" id="shelter-tabs-nav" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active px-3 py-2" id="tab-btn-shelters" onclick="switchShelterTab('shelters')">
+            <i class="fa-solid fa-house-circle-check me-2 text-success"></i>Relief Shelters (<span id="badge-shelter-count">0</span>)
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link px-3 py-2" id="tab-btn-hospitals" onclick="switchShelterTab('hospitals')">
+            <i class="fa-solid fa-hospital text-danger me-2"></i>Emergency Hospitals & Trauma (<span id="badge-hospital-count">0</span>)
+        </button>
+    </li>
+</ul>
+
+<!-- Leaflet Interactive Shelters & Routing Map -->
 <div class="card mb-4">
-    <div class="card-header">
-        <h3><i class="fa-solid fa-map text-info me-2"></i>Shelter Geographic Distribution Map</h3>
-        <span class="badge badge-medium" id="shelters-map-count">Loading shelters...</span>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3><i class="fa-solid fa-map-location-dot text-info me-2"></i>Spatial Evacuation & Facility Routing Map</h3>
+        <span class="badge badge-medium" id="shelters-map-count">Loading facilities...</span>
     </div>
     <div class="card-body p-0">
+        <!-- Live In-App Route Guidance Card (Hidden by default, shown when route is computed) -->
+        <div id="route-guidance-panel" class="p-3 bg-dark border-bottom border-secondary d-none" style="background: rgba(15, 23, 42, 0.95) !important;">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                <div>
+                    <span class="badge badge-safe mb-1"><i class="fa-solid fa-route me-1"></i>Active In-App Navigation</span>
+                    <h5 class="text-white m-0" id="route-dest-name">Destination</h5>
+                    <div class="small text-muted mt-1">
+                        <i class="fa-solid fa-road me-1 text-info"></i> Distance: <strong class="text-white" id="route-distance-val">-- km</strong> &bull;
+                        <i class="fa-solid fa-clock me-1 text-warning"></i> Est. Travel Time: <strong class="text-white" id="route-duration-val">-- mins</strong> &bull;
+                        <span class="text-muted" id="route-engine-label">Engine: OSRM</span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline text-danger" onclick="clearActiveRoute()">
+                        <i class="fa-solid fa-xmark me-1"></i> Clear Route
+                    </button>
+                </div>
+            </div>
+            <div class="alert alert-warning py-1 px-2 mt-2 mb-0 small" style="background: rgba(243,156,18,0.15); border: 1px solid #f39c12; color: #f8fafc; font-size: 0.78rem;">
+                <i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i> <strong>Safety Disclaimer:</strong> Standard OSRM road pathing does not account for real-time flood inundation, fallen poles, or police barricades. Follow emergency on-site personnel.
+            </div>
+        </div>
+
         <div class="map-container">
             <div id="map-shelters"></div>
         </div>
     </div>
 </div>
 
-<!-- Shelters List (Sorted nearest first when GPS is available) -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h3><i class="fa-solid fa-building-shield text-success me-2"></i>Available Safe Havens & Relief Camps</h3>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small" id="shelter-gps-indicator">Distances based on default location</span>
+<!-- SECTION TAB 1: Shelters List -->
+<div id="section-shelters-tab">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-building-shield text-success me-2"></i>Available Safe Havens & Relief Camps</h3>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small" id="shelter-gps-indicator">Distances based on default location</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3" id="shelters-cards-container">
+                <div class="col-12 text-center py-4 text-muted">
+                    <div class="spinner-sm mb-2"></div>
+                    <div>Fetching shelter inventory...</div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="card-body">
-        <div class="row g-3" id="shelters-cards-container">
-            <div class="col-12 text-center py-4 text-muted">
-                <div class="spinner-sm mb-2"></div>
-                <div>Fetching shelter inventory...</div>
+</div>
+
+<!-- SECTION TAB 2: Hospitals List (Hidden by default) -->
+<div id="section-hospitals-tab" class="d-none">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3><i class="fa-solid fa-hospital-user text-danger me-2"></i>Emergency Hospitals & Trauma Centers</h3>
+            <span class="text-muted small" id="hospital-gps-indicator">Distances based on user coordinates</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3" id="hospitals-cards-container">
+                <div class="col-12 text-center py-4 text-muted">
+                    <div class="spinner-sm mb-2"></div>
+                    <div>Fetching hospital bed records...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -125,7 +185,7 @@
 
 <!-- ================= Modal: Create Shelter (Admin Only) ================= -->
 <div class="modal-overlay" id="modal-create-shelter">
-    <div class="modal custom-modal-box">
+    <div class="custom-modal-box">
         <div class="modal-header">
             <h3><i class="fa-solid fa-house-chimney-medical text-success me-2"></i>Register Relief Shelter</h3>
             <button class="modal-close" onclick="closeCreateShelterModal()">&times;</button>
@@ -185,6 +245,79 @@
                 <button type="button" class="btn btn-outline" onclick="closeCreateShelterModal()">Cancel</button>
                 <button type="submit" id="btn-submit-shelter" class="btn btn-success">
                     <span class="btn-text"><i class="fa-solid fa-check me-1"></i> Save Shelter</span>
+                    <span class="spinner-sm d-none"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= Modal: Create Hospital (Admin Only) ================= -->
+<div class="modal-overlay" id="modal-create-hospital">
+    <div class="custom-modal-box">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-hospital-user text-danger me-2"></i>Register Emergency Hospital</h3>
+            <button class="modal-close" onclick="closeCreateHospitalModal()">&times;</button>
+        </div>
+        <form id="form-create-hospital" onsubmit="handleCreateHospitalSubmit(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="hosp-name">Hospital Name <span class="required">*</span></label>
+                    <input type="text" id="hosp-name" class="form-control" placeholder="e.g. Government General Hospital" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="hosp-address">Full Address <span class="required">*</span></label>
+                    <input type="text" id="hosp-address" class="form-control" placeholder="Full street address and locality" required>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="hosp-lat">Latitude <span class="required">*</span></label>
+                        <input type="number" step="any" id="hosp-lat" class="form-control" placeholder="13.0805" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hosp-lon">Longitude <span class="required">*</span></label>
+                        <input type="number" step="any" id="hosp-lon" class="form-control" placeholder="80.2785" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="hosp-beds-total">Total Bed Capacity <span class="required">*</span></label>
+                        <input type="number" id="hosp-beds-total" class="form-control" placeholder="500" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hosp-beds-avail">Available Empty Beds</label>
+                        <input type="number" id="hosp-beds-avail" class="form-control" placeholder="120" min="0" value="0">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="hosp-phone">Emergency Hotline Phone</label>
+                        <input type="tel" id="hosp-phone" class="form-control" placeholder="044-25305000">
+                    </div>
+                    <div class="form-group">
+                        <label for="hosp-trauma">Trauma Level Classification</label>
+                        <select id="hosp-trauma" class="form-control">
+                            <option value="Level 1 Trauma Center">Level 1 Trauma Center (Highest Tier)</option>
+                            <option value="Level 2 Trauma Center" selected>Level 2 Trauma Center</option>
+                            <option value="Level 3 Community Trauma">Level 3 Community Trauma</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hosp-services">Critical Services (comma separated)</label>
+                    <input type="text" id="hosp-services" class="form-control" placeholder="24/7 ER, Cardiac ICU, Burn Care, Trauma Surgery, Blood Bank">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeCreateHospitalModal()">Cancel</button>
+                <button type="submit" id="btn-submit-hospital" class="btn btn-danger">
+                    <span class="btn-text"><i class="fa-solid fa-check me-1"></i> Register Hospital</span>
                     <span class="spinner-sm d-none"></span>
                 </button>
             </div>

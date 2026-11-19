@@ -257,8 +257,38 @@ def get_session():
 
 
 # ============================================================
+# GET /api/profile – Fetch user profile
 # PUT /api/profile – Update user profile
 # ============================================================
+
+@auth_bp.route('/api/profile', methods=['GET'])
+@login_required
+def get_profile():
+    """Fetch current user's profile details."""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, username, email, full_name, role, phone, locality, latitude, longitude, created_at "
+            "FROM users WHERE id = %s",
+            (session['user_id'],)
+        )
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found.'}), 404
+        if user.get('created_at'):
+            user['created_at'] = str(user['created_at'])
+        if user.get('latitude') is not None:
+            user['latitude'] = float(user['latitude'])
+        if user.get('longitude') is not None:
+            user['longitude'] = float(user['longitude'])
+        return jsonify({'success': True, 'data': user}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Failed to retrieve profile: {str(e)}'}), 500
+    finally:
+        close_db_connection(conn, cursor)
 
 @auth_bp.route('/api/profile', methods=['PUT'])
 @login_required

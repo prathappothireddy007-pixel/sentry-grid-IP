@@ -23,6 +23,9 @@ sentrygrid_local.db
 uploads/*
 !uploads/.gitkeep
 
+# Node modules & frontend caches
+node_modules/
+
 # IDE & OS files
 .vscode/
 .idea/

@@ -10,12 +10,15 @@
 let shelterMap = null;
 let shelterMarkers = [];
 let userLocationMarker = null;
+let activeRouteLayer = null;
+let currentActiveTab = 'shelters';
 let currentUserLat = (APP_CONFIG && APP_CONFIG.currentUserLat) ? APP_CONFIG.currentUserLat : 13.0827;
 let currentUserLon = (APP_CONFIG && APP_CONFIG.currentUserLon) ? APP_CONFIG.currentUserLon : 80.2707;
 
 $(document).ready(function() {
     initShelterMap();
     loadShelters();
+    loadHospitals();
     loadDisasterReports();
 });
 
@@ -158,11 +161,16 @@ function renderSheltersCards(shelters) {
                     </div>
 
                     <!-- Action Links -->
-                    <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                    <div class="mt-auto pt-2 border-top border-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <small class="text-muted"><i class="fa-solid fa-phone me-1"></i>${escapeHtml(s.contact_phone || 'Emergency Desk')}</small>
-                        <a href="${gmapsLink}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline text-info">
-                            <i class="fa-solid fa-diamond-turn-right me-1"></i> Get Directions
-                        </a>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="routeToDestination(${s.latitude}, ${s.longitude}, '${escapeHtml(s.name).replace(/'/g, "\\'")}', 'shelter')">
+                                <i class="fa-solid fa-route me-1"></i> In-App Route
+                            </button>
+                            <a href="${gmapsLink}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline text-info" title="Open Google Maps in new tab">
+                                <i class="fa-solid fa-diamond-turn-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -347,6 +355,248 @@ function handleCreateShelterSubmit(e) {
 
             const err = (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to create shelter.';
             showToast('error', err);
+        }
+    });
+}
+
+// Switch between Shelters and Hospitals Tab
+function switchShelterTab(tab) {
+    currentActiveTab = tab;
+    if (tab === 'shelters') {
+        $('#tab-btn-shelters').addClass('active');
+        $('#tab-btn-hospitals').removeClass('active');
+        $('#section-shelters-tab').removeClass('d-none');
+        $('#section-hospitals-tab').addClass('d-none');
+    } else {
+        $('#tab-btn-hospitals').addClass('active');
+        $('#tab-btn-shelters').removeClass('active');
+        $('#section-hospitals-tab').removeClass('d-none');
+        $('#section-shelters-tab').addClass('d-none');
+    }
+}
+
+function refreshSheltersAndHospitals() {
+    loadShelters();
+    loadHospitals();
+}
+
+// Load Hospitals from Flask API
+function loadHospitals() {
+    const url = `/api/hospitals?lat=${currentUserLat}&lon=${currentUserLon}&active=true`;
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                renderHospitalsCards(response.data);
+                $('#badge-hospital-count').text(response.count || 0);
+            }
+        },
+        error: function(xhr) {
+            $('#hospitals-cards-container').html(`
+                <div class="col-12 text-center py-4 text-danger">
+                    Failed to fetch hospital records: ${(xhr.responseJSON && xhr.responseJSON.message) || 'Server error'}
+                </div>
+            `);
+        }
+    });
+}
+
+// Render Hospital Cards
+function renderHospitalsCards(hospitals) {
+    const container = document.getElementById('hospitals-cards-container');
+    if (!container) return;
+
+    if (!hospitals || hospitals.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-4 text-muted">
+                <i class="fa-solid fa-hospital fs-2 text-warning mb-2 d-block"></i>
+                No active trauma centers or hospitals found.
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    hospitals.forEach(h => {
+        const occPct = h.occupancy_rate || 0;
+        const distKm = h.distance_km !== null ? `${h.distance_km} km away` : 'Distance unavailable';
+        const gmapsLink = `https://www.google.com/maps/dir/?api=1&destination=${h.latitude},${h.longitude}`;
+
+        html += `
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100 p-3" style="border-top: 3px solid #e94560; background: #16213e;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h4 class="fs-6 m-0 text-light"><strong>${escapeHtml(h.name)}</strong></h4>
+                        <span class="badge badge-danger"><i class="fa-solid fa-truck-medical me-1"></i>${escapeHtml(distKm)}</span>
+                    </div>
+
+                    <p class="text-muted small mb-2"><i class="fa-solid fa-location-dot me-1 text-danger"></i>${escapeHtml(h.address)}</p>
+
+                    <div class="d-flex gap-2 mb-2">
+                        <span class="badge badge-medium text-warning" style="font-size: 0.72rem;">${escapeHtml(h.trauma_level || 'Trauma Center')}</span>
+                        ${h.emergency_department ? '<span class="badge badge-safe" style="font-size: 0.72rem;"><i class="fa-solid fa-bolt me-1"></i>24/7 ER Active</span>' : ''}
+                    </div>
+
+                    <!-- Bed Capacity Meter -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-secondary mb-1">
+                            <span>Bed Utilization: <strong>${h.total_beds - h.available_beds} / ${h.total_beds}</strong></span>
+                            <span class="${h.available_beds > 30 ? 'text-success' : 'text-danger'} font-weight-bold">${h.available_beds} Beds Available</span>
+                        </div>
+                        <div class="progress" style="height: 8px; background: #0f1629;">
+                            <div class="progress-bar ${occPct > 85 ? 'bg-danger' : (occPct > 60 ? 'bg-warning' : 'bg-success')}" 
+                                 role="progressbar" style="width: ${occPct}%;" aria-valuenow="${occPct}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Services -->
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Emergency Medical Services:</small>
+                        <div class="small text-secondary">${escapeHtml(h.services || 'General Emergency Care')}</div>
+                    </div>
+
+                    <!-- Action Links -->
+                    <div class="mt-auto pt-2 border-top border-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <small class="text-muted"><i class="fa-solid fa-phone me-1"></i>${escapeHtml(h.contact_phone || 'Hospital Hotline')}</small>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="routeToDestination(${h.latitude}, ${h.longitude}, '${escapeHtml(h.name).replace(/'/g, "\\'")}', 'hospital')">
+                                <i class="fa-solid fa-route me-1"></i> In-App Route
+                            </button>
+                            <a href="${gmapsLink}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline text-info" title="Open Google Maps">
+                                <i class="fa-solid fa-diamond-turn-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// In-App Polyline Routing using OSRM
+function routeToDestination(destLat, destLon, destName, destType) {
+    if (!shelterMap) return;
+
+    showLoading(`Computing live navigational route to ${destName}...`);
+
+    $.ajax({
+        url: `/api/route?origin_lat=${currentUserLat}&origin_lon=${currentUserLon}&dest_lat=${destLat}&dest_lon=${destLon}&mode=driving`,
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            hideLoading();
+            if (res.success && res.data) {
+                const r = res.data;
+
+                // Remove previous route
+                if (activeRouteLayer) {
+                    shelterMap.removeLayer(activeRouteLayer);
+                }
+
+                // Leaflet coordinates are [lat, lon], GeoJSON LineString coordinates are [lon, lat]
+                const latLngs = r.coordinates.map(pt => [pt[1], pt[0]]);
+
+                // Draw glowing cyan neon polyline
+                activeRouteLayer = L.polyline(latLngs, {
+                    color: '#00d2d3',
+                    weight: 6,
+                    opacity: 0.9,
+                    lineJoin: 'round',
+                    dashArray: null
+                }).addTo(shelterMap);
+
+                // Fit map to route bounds
+                shelterMap.fitBounds(activeRouteLayer.getBounds(), { padding: [40, 40] });
+
+                // Update route guidance panel
+                $('#route-dest-name').text(destName);
+                $('#route-distance-val').text(`${r.distance_km} km`);
+                $('#route-duration-val').text(`${r.duration_mins} mins`);
+                $('#route-engine-label').text(`Engine: ${r.engine}`);
+                $('#route-guidance-panel').removeClass('d-none');
+
+                // Smoothly scroll map into view
+                document.getElementById('map-shelters').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                showToast('success', `Route mapped: ${r.distance_km} km (${r.duration_mins} mins travel time)`, 'Navigation Active');
+            }
+        },
+        error: function(xhr) {
+            hideLoading();
+            showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to calculate route.');
+        }
+    });
+}
+
+// Clear Active Route
+function clearActiveRoute() {
+    if (activeRouteLayer && shelterMap) {
+        shelterMap.removeLayer(activeRouteLayer);
+        activeRouteLayer = null;
+    }
+    $('#route-guidance-panel').addClass('d-none');
+    showToast('info', 'Active route guidance cleared.');
+}
+
+// Admin: Open Create Hospital Modal
+function openCreateHospitalModal() {
+    $('#modal-create-hospital').addClass('active');
+}
+
+function closeCreateHospitalModal() {
+    $('#modal-create-hospital').removeClass('active');
+}
+
+// Admin: Handle Create Hospital Form
+function handleCreateHospitalSubmit(e) {
+    e.preventDefault();
+    const data = {
+        name: $('#hosp-name').val().trim(),
+        address: $('#hosp-address').val().trim(),
+        latitude: parseFloat($('#hosp-lat').val()),
+        longitude: parseFloat($('#hosp-lon').val()),
+        total_beds: parseInt($('#hosp-beds-total').val()),
+        available_beds: parseInt($('#hosp-beds-avail').val() || 0),
+        contact_phone: $('#hosp-phone').val().trim(),
+        trauma_level: $('#hosp-trauma').val(),
+        services: $('#hosp-services').val().trim(),
+        emergency_department: true,
+        is_active: true
+    };
+
+    const btn = $('#btn-submit-hospital');
+    btn.prop('disabled', true);
+    btn.find('.btn-text').addClass('d-none');
+    btn.find('.spinner-sm').removeClass('d-none');
+
+    $.ajax({
+        url: '/api/hospitals',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        dataType: 'json',
+        success: function(res) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+
+            if (res.success) {
+                showToast('success', 'Hospital registered successfully!', 'Facility Active');
+                closeCreateHospitalModal();
+                $('#form-create-hospital')[0].reset();
+                loadHospitals();
+            }
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false);
+            btn.find('.btn-text').removeClass('d-none');
+            btn.find('.spinner-sm').addClass('d-none');
+            showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to register hospital.');
         }
     });
 }

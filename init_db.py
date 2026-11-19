@@ -150,6 +150,13 @@ def init_database():
         cursor.close()
         conn.close()
 
+        # Run enhanced migrations (hospitals, missing_persons, resource_movements)
+        try:
+            from database.migrations import run_migrations
+            run_migrations()
+        except Exception as mig_err:
+            print(f"  Migration note: {mig_err}")
+
         print("\n" + "=" * 65)
         print("  SentryGrid Database Successfully Initialized on MySQL 8.0!")
         print("  Database Name: sentrygrid_db")

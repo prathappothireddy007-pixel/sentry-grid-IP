@@ -1,0 +1,249 @@
+{% extends "layout.html" %}
+
+{% block title %}Missing Persons Registry – SentryGrid{% endblock %}
+{% block page_title %}Disaster Missing Persons Registry{% endblock %}
+
+{% block content %}
+<!-- Top Header Banner -->
+<div class="card mb-3" style="background: linear-gradient(135deg, rgba(233,69,96,0.12), rgba(22,33,62,0.95)); border: 1px solid rgba(233,69,96,0.3);">
+    <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <div>
+            <h4 class="m-0 text-danger"><i class="fa-solid fa-person-circle-question me-2"></i>Missing Persons Case Registry</h4>
+            <small class="text-muted">Register, track, and coordinate citizen search operations during emergency disaster events with privacy safeguards.</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-danger btn-sm" onclick="openCreateMissingPersonModal()">
+                <i class="fa-solid fa-plus me-1"></i> File Missing Case
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="loadMissingPersons()">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Metric Cards -->
+<div class="stat-cards mb-4">
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fa-solid fa-person-circle-exclamation"></i></div>
+        <div class="stat-info"><h4 id="mp-stat-active">--</h4><p>Active Searches</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        <div class="stat-info"><h4 id="mp-stat-review">--</h4><p>Under Intake Review</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fa-solid fa-person-circle-check"></i></div>
+        <div class="stat-info"><h4 id="mp-stat-located">--</h4><p>Located & Reunited</p></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fa-solid fa-folder-open"></i></div>
+        <div class="stat-info"><h4 id="mp-stat-total">--</h4><p>Total Registered Cases</p></div>
+    </div>
+</div>
+
+<!-- Search and Filter Bar -->
+<div class="card mb-4">
+    <div class="card-body p-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-secondary border-secondary text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="mp-search-input" class="form-control" placeholder="Search by name, location, case number, or keywords..." onkeyup="debounceMPSearch()">
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <select id="mp-status-filter" class="form-control form-control-sm" onchange="loadMissingPersons()">
+                    <option value="">All Case Statuses</option>
+                    <option value="Reported">Reported (New)</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="Search Active" selected>Search Active (Urgent)</option>
+                    <option value="Located">Located & Safe</option>
+                    <option value="Closed">Closed</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 text-md-end">
+                <span class="small text-muted" id="mp-count-label">Loading records...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spatial Last-Seen Map & Cases Layout -->
+<div class="row g-4 mb-4">
+    <!-- Spatial Map Panel -->
+    <div class="col-12 col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <h5 class="m-0 fs-6"><i class="fa-solid fa-map-location-dot text-danger me-2"></i>Last-Seen Geographic Pins</h5>
+                <span class="badge badge-info" id="mp-map-marker-count">0 pins</span>
+            </div>
+            <div class="card-body p-0">
+                <div id="mp-map" style="height: 480px; width: 100%; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Case Cards Stream -->
+    <div class="col-12 col-lg-7">
+        <div id="mp-cases-container" class="d-flex flex-column gap-3">
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-sm mb-2"></div>
+                <div>Fetching missing person records...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= Modal: File Missing Person Case ================= -->
+<div class="modal-overlay" id="modal-create-missing-person">
+    <div class="custom-modal-box" style="max-width: 680px !important;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-person-circle-plus text-danger me-2"></i>File Missing Person Incident Report</h3>
+            <button class="modal-close" onclick="closeCreateMissingPersonModal()">&times;</button>
+        </div>
+        <form id="form-create-missing-person" onsubmit="handleCreateMPSubmit(event)" enctype="multipart/form-data">
+            <div class="modal-body">
+                <div class="alert alert-info py-2 px-3 small mb-3" style="background: rgba(41,128,185,0.15); border: 1px solid #2980b9; color: #cbd5e1;">
+                    <i class="fa-solid fa-shield-halved me-1 text-info"></i> <strong>Privacy Safeguard:</strong> Reporter contact information is kept confidential and accessible only to certified response coordinators.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-8">
+                        <label class="form-label small text-muted">Missing Person Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="full_name" class="form-control" placeholder="e.g. Anandhi Selvam" required>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-muted">Age</label>
+                        <input type="number" name="age" class="form-control" placeholder="e.g. 68" min="0" max="120">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-muted">Gender</label>
+                        <select name="gender" class="form-control">
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Child">Child</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-7">
+                        <label class="form-label small text-muted">Last-Seen Specific Location <span class="text-danger">*</span></label>
+                        <input type="text" name="last_seen_location" id="mp-input-location" class="form-control" placeholder="e.g. Near Velachery Bus Terminus, Chennai" required>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <label class="form-label small text-muted">Last-Seen Date & Time</label>
+                        <input type="datetime-local" name="last_seen_date" id="mp-input-date" class="form-control">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small text-muted m-0">GPS Coordinates (Optional)</label>
+                            <button type="button" class="btn btn-sm btn-outline py-0 text-cyan" onclick="captureMPLocation()" style="font-size: 0.75rem;">
+                                <i class="fa-solid fa-location-crosshairs me-1"></i> Use Device GPS
+                            </button>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="number" step="any" name="latitude" id="mp-input-lat" class="form-control form-control-sm" placeholder="Latitude">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" step="any" name="longitude" id="mp-input-lon" class="form-control form-control-sm" placeholder="Longitude">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Physical Characteristics & Clothing Description <span class="text-danger">*</span></label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Height, build, clothing worn when last seen, languages spoken, distinguishing marks, medical needs (e.g. insulin, heart medication)..." required></textarea>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small text-muted">Reporter Full Name / Relationship</label>
+                        <input type="text" name="contact_name" class="form-control" value="{{ session.get('full_name', '') }}" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small text-muted">Emergency Reachable Phone</label>
+                        <input type="text" name="contact_phone" class="form-control" value="{{ session.get('phone', '') }}" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Attach Photograph (Optional)</label>
+                        <input type="file" name="photo" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeCreateMissingPersonModal()">Cancel</button>
+                <button type="submit" class="btn btn-danger" id="btn-submit-mp">
+                    <span class="btn-text"><i class="fa-solid fa-bullhorn me-1"></i> Broadcast Missing Case</span>
+                    <span class="spinner-sm d-none"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= Modal: View Case Dossier ================= -->
+<div class="modal-overlay" id="modal-view-missing-person">
+    <div class="custom-modal-box" style="max-width: 720px !important;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-id-card text-warning me-2"></i><span id="dossier-case-number">Case Dossier</span></h3>
+            <button class="modal-close" onclick="closeViewMissingPersonModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4 text-center">
+                    <div id="dossier-photo-container" class="rounded p-2 bg-secondary border border-secondary mb-2" style="min-height: 180px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-user text-muted fs-1"></i>
+                    </div>
+                    <span class="badge" id="dossier-status-badge">Search Active</span>
+                </div>
+                <div class="col-12 col-md-8">
+                    <h4 class="text-white m-0" id="dossier-name">Full Name</h4>
+                    <div class="text-muted small mb-2" id="dossier-demographics">Age &bull; Gender</div>
+
+                    <div class="border-top border-secondary pt-2 mt-2">
+                        <div class="small text-muted mb-1"><i class="fa-solid fa-location-dot text-danger me-1"></i> Last Seen: <strong class="text-white" id="dossier-location">Location</strong></div>
+                        <div class="small text-muted mb-2"><i class="fa-regular fa-clock me-1"></i> Time: <span id="dossier-time">Timestamp</span></div>
+                        <div class="p-3 bg-secondary rounded text-light small mb-3" id="dossier-description">Physical description...</div>
+
+                        <div class="p-2 bg-dark rounded border border-secondary small">
+                            <span class="text-muted d-block mb-1"><i class="fa-solid fa-phone me-1 text-success"></i> Primary Contact Information:</span>
+                            <strong class="text-white" id="dossier-contact">Contact Name</strong> &bull; <span class="text-info" id="dossier-phone">Phone</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management Controls for Admin & Responders -->
+            {% if session.get('role') in ['admin', 'responder'] %}
+            <div class="border-top border-secondary pt-3 mt-4">
+                <h6 class="text-warning mb-2"><i class="fa-solid fa-sliders me-1"></i>Official Case Status Workflow Action</h6>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <select id="update-case-status-select" class="form-control form-control-sm" style="max-width: 200px;">
+                        <option value="Reported">Reported</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="Search Active">Search Active</option>
+                        <option value="Located">Located & Safe</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Invalid/Duplicate">Invalid / Duplicate</option>
+                    </select>
+                    <input type="text" id="update-case-notes" class="form-control form-control-sm flex-grow-1" placeholder="Audit notes for this status update...">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="submitCaseStatusUpdate()">
+                        <i class="fa-solid fa-check me-1"></i> Update Status
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeViewMissingPersonModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/missing_persons.js"></script>
+{% endblock %}

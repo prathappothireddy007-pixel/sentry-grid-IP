@@ -12,6 +12,7 @@ $(document).ready(function() {
     loadAlerts();
     loadExternalWeatherTelemetry();
     loadMultiRegionWeather();
+    loadLiveEarthquakes();
 
     // Configurable polling for new alerts
     const pollTime = (APP_CONFIG && APP_CONFIG.pollIntervalAlerts) ? APP_CONFIG.pollIntervalAlerts : 30000;
@@ -362,6 +363,134 @@ function deactivateAlert(alertId) {
         error: function(xhr) {
             hideLoading();
             showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to deactivate alert.');
+        }
+    });
+}
+
+// ============================================================
+// Live USGS Earthquake Surveillance Controller
+// ============================================================
+let earthquakeMap = null;
+let earthquakeLayerGroup = null;
+
+function initEarthquakeMap() {
+    const mapContainer = document.getElementById('earthquake-map');
+    if (!mapContainer || earthquakeMap) return;
+
+    earthquakeMap = L.map('earthquake-map').setView([15.0, 78.0], 3);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | USGS'
+    }).addTo(earthquakeMap);
+
+    earthquakeLayerGroup = L.layerGroup().addTo(earthquakeMap);
+}
+
+function loadLiveEarthquakes() {
+    initEarthquakeMap();
+    const period = $('#eq-filter-period').val() || 'day';
+    const minMag = $('#eq-filter-mag').val() || '4.5';
+    const tbody = document.getElementById('earthquake-feed-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted"><div class="spinner-sm mb-1"></div><div>Querying USGS GeoJSON API...</div></td></tr>';
+    }
+
+    $.ajax({
+        url: `/api/earthquakes?period=${encodeURIComponent(period)}&min_magnitude=${encodeURIComponent(minMag)}`,
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            if (!res.success) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-danger">${escapeHtml(res.message || 'USGS feed unavailable')}</td></tr>`;
+                return;
+            }
+
+            const features = res.features || [];
+            $('#eq-count-badge').text(`${features.length} Events`);
+
+            if (earthquakeLayerGroup) {
+                earthquakeLayerGroup.clearLayers();
+            }
+
+            if (features.length === 0) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">No seismic events found matching current criteria.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            features.forEach(eq => {
+                const mag = eq.magnitude;
+                let color = '#38bdf8';
+                let sevBadge = '<span class="badge badge-low">Minor</span>';
+                if (mag >= 6.0) {
+                    color = '#e94560';
+                    sevBadge = '<span class="badge badge-critical">Severe M' + mag.toFixed(1) + '</span>';
+                } else if (mag >= 5.0) {
+                    color = '#f59e0b';
+                    sevBadge = '<span class="badge badge-high">Strong M' + mag.toFixed(1) + '</span>';
+                } else if (mag >= 4.0) {
+                    color = '#10b981';
+                    sevBadge = '<span class="badge badge-medium">Moderate M' + mag.toFixed(1) + '</span>';
+                }
+
+                // Plot circle marker on Leaflet map
+                if (earthquakeLayerGroup && eq.latitude && eq.longitude) {
+                    const radius = Math.max(6, Math.min(24, (mag - 2) * 5));
+                    const circle = L.circleMarker([eq.latitude, eq.longitude], {
+                        radius: radius,
+                        fillColor: color,
+                        color: '#ffffff',
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillOpacity: 0.75
+                    });
+
+                    const popupContent = `
+                        <div style="min-width: 220px; font-family: sans-serif; color: #1e293b;">
+                            <h6 style="margin: 0 0 5px 0; font-weight: bold; color: ${color};">
+                                Magnitude ${mag.toFixed(1)} &bull; ${escapeHtml(eq.title)}
+                            </h6>
+                            <div style="font-size: 0.8rem; line-height: 1.4; color: #334155;">
+                                <div><strong>Depth:</strong> ${eq.depth_km} km</div>
+                                <div><strong>Coordinates:</strong> ${eq.latitude.toFixed(4)}, ${eq.longitude.toFixed(4)}</div>
+                                <div><strong>Distance:</strong> ${eq.distance_km ? eq.distance_km + ' km away' : 'Global event'}</div>
+                                <div><strong>Recorded:</strong> ${escapeHtml(eq.event_time)}</div>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <a href="${eq.url}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: bold; font-size: 0.8rem;">
+                                    Official USGS Event Page <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    circle.bindPopup(popupContent);
+                    earthquakeLayerGroup.addLayer(circle);
+                }
+
+                // Table row
+                html += `
+                    <tr>
+                        <td>
+                            <strong style="color: ${color}; font-size: 1.05rem;">M ${mag.toFixed(1)}</strong>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-light" style="font-size: 0.85rem;">${escapeHtml(eq.place)}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Depth: ${eq.depth_km} km &bull; ${escapeHtml(eq.event_time)}</div>
+                        </td>
+                        <td>${sevBadge}</td>
+                        <td>
+                            <div class="small text-info">${eq.distance_km ? eq.distance_km + ' km' : 'Global'}</div>
+                            <a href="${eq.url}" target="_blank" rel="noopener noreferrer" class="small text-muted" style="font-size: 0.75rem;" title="View on USGS website">
+                                USGS <i class="fa-solid fa-external-link me-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (tbody) tbody.innerHTML = html;
+        },
+        error: function() {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Failed to fetch USGS earthquake data.</td></tr>';
         }
     });
 }

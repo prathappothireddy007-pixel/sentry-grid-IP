@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, session
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-from config import Config, get_db_connection, close_db_connection, allowed_file
+from config import Config, get_db_connection, close_db_connection, allowed_file, haversine
 from routes.auth import login_required, role_required
 
 emergencies_bp = Blueprint('emergencies', __name__)
@@ -101,6 +101,8 @@ def get_requests():
         results = cursor.fetchall()
 
         for r in results:
+            r['tracking_code'] = f"SG-2026-{r['id']:04d}"
+            r['affected_count'] = r.get('affected_count') or 1
             for k in ['created_at', 'updated_at']:
                 if r.get(k):
                     r[k] = format_datetime(r[k])
@@ -170,6 +172,8 @@ def get_request_detail(request_id):
         teams = cursor.fetchall()
 
         # Serialize
+        req['tracking_code'] = f"SG-2026-{req['id']:04d}"
+        req['affected_count'] = req.get('affected_count') or 1
         for k in ['created_at', 'updated_at']:
             if req.get(k): req[k] = format_datetime(req[k])
         for k in ['latitude', 'longitude']:
@@ -363,6 +367,148 @@ def update_request_status(request_id):
     except Exception as e:
         if conn: conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        close_db_connection(conn, cursor)
+
+
+# ============================================================
+# GET /api/requests/<id>/recommend-teams – Smart Dispatch AI/Heuristic (Admin/Responder)
+# ============================================================
+
+@emergencies_bp.route('/api/requests/<int:request_id>/recommend-teams', methods=['GET'])
+@login_required
+def recommend_teams(request_id):
+    """
+    Intelligent rescue squad recommendation engine:
+    Evaluates squad specialization, live geospatial distance (Haversine),
+    current active dispatch workload, and operational status to generate
+    ranked recommendation scores (0-100%) with explainable criteria.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM emergency_requests WHERE id = %s", (request_id,))
+        incident = cursor.fetchone()
+        if not incident:
+            return jsonify({'success': False, 'message': 'Incident request not found.'}), 404
+
+        inc_lat = float(incident['latitude']) if incident.get('latitude') else None
+        inc_lon = float(incident['longitude']) if incident.get('longitude') else None
+        inc_type = incident.get('emergency_type', 'other')
+
+        # Category mapping for specialization matching
+        type_to_categories = {
+            'medical': ['medical'],
+            'flood_rescue': ['flood_rescue', 'search_rescue'],
+            'fire': ['fire', 'general'],
+            'trapped': ['search_rescue', 'general'],
+            'other': ['general', 'search_rescue']
+        }
+        preferred_cats = type_to_categories.get(inc_type, ['general'])
+
+        # Fetch all teams
+        cursor.execute("SELECT * FROM response_teams WHERE status != 'off_duty'")
+        teams = cursor.fetchall()
+
+        # Fetch active workload counts per team
+        cursor.execute(
+            "SELECT team_id, COUNT(*) as active_tickets "
+            "FROM team_assignments "
+            "WHERE completed_at IS NULL "
+            "GROUP BY team_id"
+        )
+        workload_map = {row['team_id']: row['active_tickets'] for row in cursor.fetchall()}
+
+        ranked_teams = []
+        for team in teams:
+            tid = team['id']
+            t_cat = team.get('team_category', 'general')
+            t_status = team.get('status', 'available')
+            t_lat = float(team['latitude']) if team.get('latitude') else None
+            t_lon = float(team['longitude']) if team.get('longitude') else None
+            active_tickets = workload_map.get(tid, 0)
+
+            # 1. Haversine distance
+            dist_km = None
+            if inc_lat is not None and inc_lon is not None and t_lat is not None and t_lon is not None:
+                dist_km = round(haversine(inc_lat, inc_lon, t_lat, t_lon), 2)
+            else:
+                dist_km = 4.2  # Estimated average urban distance
+
+            # 2. Score calculation
+            score = 50  # Baseline
+            reasons = []
+
+            # Category score
+            if t_cat == preferred_cats[0]:
+                score += 30
+                reasons.append(f"Direct specialization match ({t_cat.replace('_', ' ').title()})")
+            elif len(preferred_cats) > 1 and t_cat in preferred_cats:
+                score += 18
+                reasons.append(f"Multi-disciplinary capability ({t_cat.replace('_', ' ').title()})")
+            else:
+                score += 5
+                reasons.append(f"General response squad ({t_cat.replace('_', ' ').title()})")
+
+            # Proximity score
+            if dist_km <= 2.5:
+                score += 20
+                reasons.append(f"Immediate proximity ({dist_km} km away)")
+            elif dist_km <= 6.0:
+                score += 12
+                reasons.append(f"Moderate response radius ({dist_km} km away)")
+            else:
+                score += 4
+                reasons.append(f"Extended transit corridor ({dist_km} km away)")
+
+            # Workload & readiness
+            if t_status == 'available' and active_tickets == 0:
+                score += 15
+                reasons.append("Unit currently available with zero active backlog")
+            elif active_tickets == 1:
+                score += 5
+                reasons.append("Unit currently handling 1 active assignment")
+            else:
+                score -= 12
+                reasons.append(f"High operational load ({active_tickets} active tickets)")
+
+            # Clamp between 15 and 98
+            score = max(15, min(98, score))
+
+            ranked_teams.append({
+                'team_id': tid,
+                'team_name': team['team_name'],
+                'category': t_cat,
+                'status': t_status,
+                'team_leader': team.get('team_leader', 'Unassigned'),
+                'member_count': team.get('member_count', 0),
+                'phone': team.get('phone', ''),
+                'base_location': team.get('base_location', ''),
+                'distance_km': dist_km,
+                'active_tickets': active_tickets,
+                'recommendation_score': score,
+                'reasons': reasons
+            })
+
+        # Sort descending by recommendation_score
+        ranked_teams.sort(key=lambda t: t['recommendation_score'], reverse=True)
+
+        return jsonify({
+            'success': True,
+            'incident': {
+                'id': incident['id'],
+                'tracking_code': f"SG-2026-{incident['id']:04d}",
+                'emergency_type': inc_type,
+                'priority': incident.get('priority', 'Medium'),
+                'location': incident.get('location', 'Unknown')
+            },
+            'data': ranked_teams
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Failed to compute recommendations: {str(e)}'}), 500
     finally:
         close_db_connection(conn, cursor)
 

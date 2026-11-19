@@ -309,4 +309,34 @@ INSERT INTO notifications (user_id, title, message, type, is_read, link) VALUES
 -- Notification for citizen (user 3): Alert in their area
 (3, 'Disaster Alert: Severe Flooding in Chennai',
  'A Critical flood alert has been issued for Chennai, Tamil Nadu. Please follow safety instructions and move to higher ground if in a low-lying area. Nearest shelter: Chennai Relief Camp - Anna Nagar.',
- 'alert', FALSE, '/citizen/alerts');
+ 'alert', FALSE, '/alerts');
+
+-- --------------------------------------------------------
+-- HOSPITALS & TRAUMA CENTERS
+-- --------------------------------------------------------
+
+INSERT INTO hospitals (name, address, latitude, longitude, contact_phone, emergency_department, total_beds, available_beds, trauma_level, services, is_active) VALUES
+('Rajiv Gandhi Government General Hospital (RGGGH)', 'EVR Periyar Salai, Park Town, Chennai, Tamil Nadu 600003', 13.08050000, 80.27850000, '044-25305000', TRUE, 850, 142, 'Level 1 Trauma Center', '24/7 ER, Cardiac ICU, Burn Care, Trauma Surgery, Blood Bank', TRUE),
+('Apollo Speciality Hospital – Greams Road', '21 Greams Lane, Thousand Lights, Chennai, Tamil Nadu 600006', 13.05690000, 80.25030000, '044-28290200', TRUE, 560, 48, 'Level 1 Trauma Center', 'Emergency ICU, Neurosurgery, Organ Transplant, Hyperbaric Oxygen', TRUE),
+('Government Kilpauk Medical College Hospital (KMC)', 'Poonamallee High Rd, Kilpauk, Chennai, Tamil Nadu 600010', 13.08060000, 80.24350000, '044-28364951', TRUE, 420, 85, 'Level 2 Trauma Center', 'Specialized Burns Unit, Pediatric Trauma, Orthopedic Emergency', TRUE),
+('Kalyani General & Trauma Care Center', '142 Trunk Road, Velachery Sector, Chennai, Tamil Nadu 600042', 12.98100000, 80.22150000, '044-22448899', TRUE, 220, 31, 'Level 3 Community Trauma', 'Emergency Triage, Flood Casualty Care, Fracture Ward', TRUE),
+('Fortis Malar Hospital – Adyar', '52 1st Main Rd, Gandhi Nagar, Adyar, Chennai, Tamil Nadu 600020', 13.00750000, 80.25700000, '044-42892222', TRUE, 180, 24, 'Level 2 Trauma Center', 'Cardiac Emergency, Emergency Dialysis, Critical Care', TRUE);
+
+-- --------------------------------------------------------
+-- MISSING PERSONS REGISTRY
+-- --------------------------------------------------------
+
+INSERT INTO missing_persons (case_number, full_name, age, gender, photo_path, last_seen_date, last_seen_location, latitude, longitude, description, emergency_request_id, contact_name, contact_phone, status, reported_by) VALUES
+('MP-2026-0001', 'Anandhi Selvam', 68, 'Female', NULL, '2026-11-01 16:30:00', 'Near Velachery Bus Terminus, Chennai', 12.97566900, 80.21820900, 'Height 5ft 2in, wearing green cotton saree, silver spectacles. Speaks Tamil. Hard of hearing and requires diabetic medication.', 2, 'Karthik Selvam (Son)', '9876500111', 'Search Active', 1),
+('MP-2026-0002', 'Rohan Verma', 11, 'Male', NULL, '2026-11-01 17:15:00', 'Anna Nagar Tower Park entrance, Chennai', 13.08500000, 80.21000000, 'Height 4ft 5in, blue t-shirt and grey shorts. Separated from family during sudden cloudburst evacuation.', NULL, 'Meera Verma (Mother)', '9876500222', 'Reported', 3),
+('MP-2026-0003', 'Muthu Krishnan', 45, 'Male', NULL, '2026-11-01 14:00:00', 'Marina Beach Lighthouse Promenade, Chennai', 13.03840000, 80.28000000, 'Height 5ft 8in, fisherman raincoat, brown trousers. Missing after storm surge struck docking jetty.', 1, 'Revathi Krishnan (Wife)', '9876500333', 'Under Review', 1);
+
+-- --------------------------------------------------------
+-- RESOURCE MOVEMENTS & ALLOCATION AUDIT
+-- --------------------------------------------------------
+
+INSERT INTO resource_movements (resource_id, movement_type, quantity, destination_type, destination_id, notes, performed_by) VALUES
+(1, 'restock', 100, 'direct', NULL, 'Central warehouse intake delivery - 100 Family Tents received', 1),
+(1, 'allocated', 30, 'shelter', 1, 'Dispatched 30 Tents to Anna Nagar Relief Camp due to overflow', 1),
+(3, 'allocated', 40, 'hospital', 1, 'Emergency trauma medicine kits delivered to RGGGH General Hospital', 1),
+(4, 'restock', 250, 'direct', NULL, 'Procured 250 cartons of bottled drinking water for monsoon relief', 1);
